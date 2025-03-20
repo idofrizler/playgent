@@ -1,41 +1,73 @@
 {
-	"name": "helloworld-sample",
-	"displayName": "helloworld-sample",
-	"description": "HelloWorld example for VS Code",
-	"version": "0.0.1",
-	"publisher": "vscode-samples",
-	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-sample",
-	"engines": {
-		"vscode": "^1.74.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onStartupFinished"
-	],
-	"main": "./out/extension.js",
-	"contributes": {
-		"commands": [
-			{
-				"command": "extension.helloWorld",
-				"title": "Hello World"
-			}
-		]
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"lint": "eslint",
-		"watch": "tsc -watch -p ./"
-	},
-	"devDependencies": {
-		"@eslint/js": "^9.13.0",
-		"@stylistic/eslint-plugin": "^2.9.0",
-		"@types/node": "^20",
-		"@types/vscode": "^1.74.0",
-		"eslint": "^9.13.0",
-		"typescript": "^5.8.2",
-		"typescript-eslint": "^8.26.0"
-	}
+  "name": "playgent",
+  "displayName": "Playgent",
+  "description": "Take short game breaks while waiting for GitHub Copilot responses",
+  "version": "0.1.0",
+  "publisher": "vscode-samples",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/vscode-extension-samples"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "playgent.showGame",
+        "title": "Playgent: Open Game Window"
+      },
+      {
+        "command": "playgent.selectGame",
+        "title": "Playgent: Select Game"
+      },
+      {
+        "command": "playgent.findLogs",
+        "title": "Playgent: Monitor Copilot Activity"
+      }
+    ],
+    "configuration": {
+      "title": "Playgent",
+      "properties": {
+        "playgent.autoStartMonitoring": {
+          "type": "boolean",
+          "default": true,
+          "description": "Start monitoring Copilot activity automatically when extension is activated"
+        },
+        "playgent.defaultGame": {
+          "type": "string",
+          "default": "dino-game",
+          "description": "The default game to show"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "20.2.5",
+    "@typescript-eslint/eslint-plugin": "^5.59.8",
+    "@typescript-eslint/parser": "^5.59.8",
+    "eslint": "^8.41.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.1.3",
+    "@vscode/test-electron": "^2.3.2"
+  }
 }

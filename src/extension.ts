@@ -2,7 +2,11 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { CopilotGame, GameRegistry } from './gameInterface';
+import { DinoGame } from './games/dinoGame';
+import { MemoryGame } from './games/memoryGame';
 
+// Extension state
 let outputChannel: vscode.OutputChannel;
 let statusBarItem: vscode.StatusBarItem;
 let logFileWatcher: fs.FSWatcher | undefined;
@@ -13,71 +17,199 @@ let webviewPanel: vscode.WebviewPanel | undefined;
 let timerStarted: boolean = false;
 let timerStartTime: number = 0;
 let timerInterval: NodeJS.Timeout | undefined;
+let currentGame: CopilotGame | undefined;
+
+// Config settings
+const CONFIG_SECTION = 'playgent';
+
+// Register games
+function registerGames() {
+    GameRegistry.registerGame(new DinoGame());
+    GameRegistry.registerGame(new MemoryGame());
+    // Add new games here
+}
 
 export function activate(context: vscode.ExtensionContext) {
+    // Register games
+    registerGames();
+    
     // Create output channel
-    outputChannel = vscode.window.createOutputChannel('Copilot Monitor');
-    outputChannel.show(); // Show the output channel immediately on activation
+    outputChannel = vscode.window.createOutputChannel('Playgent');
     
     // Log initial message
-    outputChannel.appendLine(`[${new Date().toISOString()}] Copilot Monitor Extension activated`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Playgent Extension activated`);
     
-    // Create status bar item
+    // Create status bar item with icon
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.text = "$(copilot) Copilot Chat Monitor";
-    statusBarItem.tooltip = "Monitoring Copilot Chat logs";
-    statusBarItem.command = 'extension.findCopilotLogs';
+    statusBarItem.text = "$(gamepad) Playgent";
+    statusBarItem.tooltip = "Playgent: Take a break while waiting for Copilot";
+    statusBarItem.command = 'playgent.showGame';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
     
     // Register commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('extension.findCopilotLogs', () => {
+        vscode.commands.registerCommand('playgent.findLogs', () => {
             findAndMonitorCopilotLogs();
+            // Show notification to user
+            vscode.window.showInformationMessage('Playgent is now monitoring Copilot activity');
         }),
-        vscode.commands.registerCommand('extension.showTimerWebview', () => {
+        vscode.commands.registerCommand('playgent.showGame', () => {
             createOrShowWebviewPanel(context.extensionUri);
+        }),
+        vscode.commands.registerCommand('playgent.selectGame', async () => {
+            await selectGame(context.extensionUri);
         })
     );
     
-    // Start monitoring automatically - only once at startup
-    findAndMonitorCopilotLogs();
+    // Get configuration
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    
+    // Start monitoring automatically if enabled
+    if (config.get<boolean>('autoStartMonitoring', true)) {
+        findAndMonitorCopilotLogs();
+    }
+    
+    // Set default game if configured
+    const defaultGameId = config.get<string>('defaultGame', 'dino-game');
+    if (defaultGameId) {
+        const game = GameRegistry.getGame(defaultGameId);
+        if (game) {
+            currentGame = game;
+        }
+    }
+    
+    // Listen for configuration changes
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration(`${CONFIG_SECTION}.autoStartMonitoring`)) {
+                const newConfig = vscode.workspace.getConfiguration(CONFIG_SECTION);
+                if (newConfig.get<boolean>('autoStartMonitoring', true)) {
+                    findAndMonitorCopilotLogs();
+                } else {
+                    stopMonitoring();
+                }
+            }
+            
+            if (e.affectsConfiguration(`${CONFIG_SECTION}.defaultGame`)) {
+                const newConfig = vscode.workspace.getConfiguration(CONFIG_SECTION);
+                const defaultGameId = newConfig.get<string>('defaultGame', 'dino-game');
+                if (defaultGameId) {
+                    const game = GameRegistry.getGame(defaultGameId);
+                    if (game && (!currentGame || webviewPanel === undefined)) {
+                        currentGame = game;
+                    }
+                }
+            }
+        })
+    );
     
     context.subscriptions.push({
         dispose: () => {
-            if (filePollingInterval) {
-                clearInterval(filePollingInterval);
-            }
-            if (logFileWatcher) {
-                logFileWatcher.close();
-            }
+            stopMonitoring();
             if (timerInterval) {
                 clearInterval(timerInterval);
+                timerInterval = undefined;
             }
             if (webviewPanel) {
                 webviewPanel.dispose();
+                webviewPanel = undefined;
             }
         }
     });
 }
 
-// Create or show the webview panel with a timer
+// Stop monitoring logs
+function stopMonitoring(): void {
+    if (filePollingInterval) {
+        clearInterval(filePollingInterval);
+        filePollingInterval = undefined;
+    }
+    if (logFileWatcher) {
+        logFileWatcher.close();
+        logFileWatcher = undefined;
+    }
+    
+    statusBarItem.text = "$(gamepad) Playgent";
+    statusBarItem.tooltip = "Playgent: Take a break while waiting for Copilot";
+    
+    outputChannel.appendLine(`[${new Date().toISOString()}] Stopped monitoring Copilot logs`);
+}
+
+/**
+ * Select a game from the list of available games
+ */
+async function selectGame(extensionUri: vscode.Uri): Promise<void> {
+    const games = GameRegistry.getAllGames();
+    
+    if (games.length === 0) {
+        vscode.window.showInformationMessage('No games are registered');
+        return;
+    }
+    
+    const gameItems = games.map(game => ({
+        label: game.name,
+        description: game.description,
+        iconPath: new vscode.ThemeIcon('gamepad'),
+        game: game
+    }));
+    
+    const selectedItem = await vscode.window.showQuickPick(gameItems, {
+        placeHolder: 'Select a game to play',
+        title: 'Playgent Games'
+    });
+    
+    if (selectedItem) {
+        currentGame = selectedItem.game;
+        if (webviewPanel) {
+            webviewPanel.dispose(); // Close the current panel
+            webviewPanel = undefined;
+        }
+        createOrShowWebviewPanel(extensionUri); // Create a new panel with the selected game
+        
+        // Save as default game if the user wants
+        const saveAsDefault = await vscode.window.showInformationMessage(
+            `Do you want to set ${selectedItem.game.name} as your default game?`,
+            'Yes', 'No'
+        );
+        
+        if (saveAsDefault === 'Yes') {
+            const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+            await config.update('defaultGame', selectedItem.game.id, vscode.ConfigurationTarget.Global);
+        }
+    }
+}
+
+// Create or show the webview panel with the current game
 function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
+    if (!currentGame) {
+        currentGame = GameRegistry.getDefaultGame();
+        if (!currentGame) {
+            vscode.window.showErrorMessage('No games available');
+            return;
+        }
+    }
+
     if (webviewPanel) {
         // If panel already exists, reveal it
         webviewPanel.reveal(vscode.ViewColumn.One);
     } else {
         // Create a new panel
         webviewPanel = vscode.window.createWebviewPanel(
-            'copilotTimer',
-            'Copilot Task Timer',
+            'playgentGame',
+            `Playgent: ${currentGame.name}`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true
+                retainContextWhenHidden: true,
+                localResourceRoots: [extensionUri]
             }
         );
 
+        webviewPanel.iconPath = {
+            light: vscode.Uri.joinPath(extensionUri, 'resources', 'light', 'gamepad.svg'),
+            dark: vscode.Uri.joinPath(extensionUri, 'resources', 'dark', 'gamepad.svg')
+        };
         webviewPanel.webview.html = getWebviewContent(extensionUri);
 
         // Handle webview panel being closed
@@ -101,6 +233,9 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
                         webviewPanel = undefined;
                     }
                     break;
+                case 'changeGame':
+                    selectGame(extensionUri);
+                    break;
             }
         });
     }
@@ -111,182 +246,144 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
 
 // Get the HTML content for the webview
 function getWebviewContent(extensionUri: vscode.Uri): string {
+    if (!currentGame) {
+        currentGame = GameRegistry.getDefaultGame();
+        if (!currentGame) {
+            return `<html><body>No games available</body></html>`;
+        }
+    }
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Copilot Fun Game</title>
+        <title>Playgent: ${currentGame.name}</title>
         <style>
+            :root {
+                --container-padding: 20px;
+                --base-font-size: 14px;
+            }
+
             body {
-                font-family: Arial, sans-serif;
-                padding: 20px;
+                font-family: var(--vscode-font-family);
+                font-size: var(--base-font-size);
+                padding: 0;
+                margin: 0;
                 color: var(--vscode-foreground);
                 background-color: var(--vscode-editor-background);
+            }
+
+            .header {
+                background-color: var(--vscode-editor-inactiveSelectionBackground);
+                padding: 10px var(--container-padding);
+                border-bottom: 1px solid var(--vscode-panel-border);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .logo {
+                font-size: 18px;
+                font-weight: bold;
+                color: var(--vscode-activityBar-activeBorder);
+            }
+
+            .game-title {
+                font-size: 16px;
+                font-weight: bold;
+            }
+
+            .header-right {
+                display: flex;
+                gap: 10px;
+            }
+
+            .content {
+                padding: var(--container-padding);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
             }
+
+            .action-button {
+                background-color: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
+                border: none;
+                padding: 6px 12px;
+                cursor: pointer;
+                border-radius: 2px;
+                font-family: var(--vscode-font-family);
+                font-size: var(--base-font-size);
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                transition: background-color 0.2s;
+            }
+
+            .action-button:hover {
+                background-color: var(--vscode-button-hoverBackground);
+            }
+
+            .action-button:focus {
+                outline: 1px solid var(--vscode-focusBorder);
+            }
+
             .game-container {
+                margin-top: 10px;
                 width: 100%;
-                max-width: 600px;
-                height: 200px;
-                border: 1px solid var(--vscode-editor-foreground);
-                position: relative;
-                overflow: hidden;
-                background-color: white;
             }
-            .dino {
-                width: 40px;
-                height: 40px;
-                background-color: black;
-                position: absolute;
-                bottom: 0;
-                left: 20px;
-            }
-            .obstacle {
-                width: 20px;
-                height: 40px;
-                background-color: red;
-                position: absolute;
-                bottom: 0;
-                right: 0;
-                animation: moveObstacle 2s linear infinite;
-            }
-            @keyframes moveObstacle {
-                from { right: 0; }
-                to { right: 100%; }
-            }
-            .score {
-                position: absolute;
-                top: 10px;
-                left: 10px;
-                font-size: 18px;
-                font-weight: bold;
-            }
-            .top-score {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                font-size: 18px;
-                font-weight: bold;
-            }
-            .final-score {
-                display: none;
-                font-size: 24px;
-                font-weight: bold;
-                color: red;
+
+            .footer {
                 margin-top: 20px;
+                text-align: center;
+                font-size: 12px;
+                color: var(--vscode-descriptionForeground);
+                padding: 10px;
+                border-top: 1px solid var(--vscode-panel-border);
             }
+
+            ${currentGame.getCssContent()}
         </style>
     </head>
     <body>
-        <h1>Copilot Fun Game</h1>
-        <div class="game-container" id="gameContainer">
-            <div class="dino" id="dino"></div>
-            <div class="obstacle" id="obstacle"></div>
-            <div class="score" id="score">0</div>
-            <div class="top-score" id="topScore">Top Score: 0</div>
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">Playgent</div>
+                <div class="game-title">${currentGame.name}</div>
+            </div>
+            <div class="header-right">
+                <button class="action-button" id="changeGameBtn">
+                    <span>Change Game</span>
+                </button>
+            </div>
         </div>
-        <div class="final-score" id="finalScore">Top Score: 0</div>
+        <div class="content">
+            <div class="game-container">
+                ${currentGame.getHtmlContent()}
+            </div>
+        </div>
+        <div class="footer">
+            Playgent - Take breaks while waiting for Copilot
+        </div>
+        
         <script>
             (function() {
-                const dino = document.getElementById('dino');
-                const gameContainer = document.getElementById('gameContainer');
-                const scoreDisplay = document.getElementById('score');
-                const topScoreDisplay = document.getElementById('topScore');
-                const finalScoreDisplay = document.getElementById('finalScore');
-                let isJumping = false;
-                let gravity = 0.9;
-                let score = 0;
-                let topScore = 0;
-                let gameInterval;
-
-                // Load top score from local storage
-                if (localStorage.getItem('topScore')) {
-                    topScore = parseInt(localStorage.getItem('topScore'));
-                    topScoreDisplay.textContent = 'Top Score: ' + topScore;
-                }
-
-                document.addEventListener('keydown', function(event) {
-                    if (event.code === 'Space' && !isJumping) {
-                        jump();
-                    }
+                const vscode = acquireVsCodeApi();
+                
+                // Setup change game button
+                document.getElementById('changeGameBtn').addEventListener('click', () => {
+                    vscode.postMessage({ command: 'changeGame' });
                 });
-
-                function jump() {
-                    let position = 0;
-                    isJumping = true;
-
-                    let upInterval = setInterval(() => {
-                        if (position >= 150) {
-                            clearInterval(upInterval);
-
-                            let downInterval = setInterval(() => {
-                                if (position <= 0) {
-                                    clearInterval(downInterval);
-                                    isJumping = false;
-                                }
-                                position -= 5;
-                                position = position * gravity;
-                                dino.style.bottom = position + 'px';
-                            }, 20);
-                        }
-                        position += 30;
-                        dino.style.bottom = position + 'px';
-                    }, 20);
-                }
-
-                function checkCollision() {
-                    const dinoRect = dino.getBoundingClientRect();
-                    const obstacleRect = document.getElementById('obstacle').getBoundingClientRect();
-
-                    if (
-                        dinoRect.right > obstacleRect.left &&
-                        dinoRect.left < obstacleRect.right &&
-                        dinoRect.bottom > obstacleRect.top
-                    ) {
-                        resetGame();
-                    }
-                }
-
-                function resetGame() {
-                    if (score > topScore) {
-                        topScore = score;
-                        localStorage.setItem('topScore', topScore);
-                        topScoreDisplay.textContent = 'Top Score: ' + topScore;
-                    }
-                    score = 0;
-                    scoreDisplay.textContent = score;
-                    dino.style.bottom = '0px';
-                    isJumping = false;
-                }
-
-                function updateScore() {
-                    score++;
-                    scoreDisplay.textContent = score;
-                }
-
-                gameInterval = setInterval(() => {
-                    checkCollision();
-                    updateScore();
-                }, 100);
-
-                window.addEventListener('message', event => {
-                    const message = event.data;
-                    if (message.type === 'stopGame') {
-                        clearInterval(gameInterval);
-                        topScoreDisplay.textContent = 'Top Score: ' + topScore;
-                        gameContainer.style.display = 'none';
-                        finalScoreDisplay.textContent = 'Top Score: ' + topScore;
-                        finalScoreDisplay.style.display = 'block';
-                        setTimeout(() => {
-                            const vscode = acquireVsCodeApi();
-                            vscode.postMessage({ command: 'closeWebview' });
-                        }, 2000);
-                    }
-                });
+                
+                // Game specific JavaScript
+                ${currentGame.getJavaScriptContent()}
             })();
         </script>
     </body>
@@ -303,18 +400,32 @@ function startTimer(): void {
     timerStartTime = Date.now();
     outputChannel.appendLine(`[${new Date().toISOString()}] Tool call detected, starting timer`);
     
+    // Update status bar
+    statusBarItem.text = "$(gamepad) Playgent $(loading~spin)";
+    statusBarItem.tooltip = "Playgent: Copilot activity in progress";
+    
     // Create webview if it doesn't exist
     if (!webviewPanel) {
         createOrShowWebviewPanel(vscode.Uri.file(path.dirname(path.dirname(__filename))));
     }
     
-    // Update webview with initial state
-    updateWebviewTimer('Timer started: tool call detected');
-    
     // Start timer interval
     timerInterval = setInterval(() => {
-        updateWebviewTimer('Timer running: waiting for completion');
+        updateStatusBar();
     }, 1000);
+}
+
+// Update status bar with animation
+function updateStatusBar(): void {
+    const elapsedMs = Date.now() - timerStartTime;
+    const seconds = Math.floor(elapsedMs / 1000);
+    
+    // Alternate animation states
+    if (seconds % 2 === 0) {
+        statusBarItem.text = "$(gamepad) Playgent $(loading~spin)";
+    } else {
+        statusBarItem.text = "$(play) Playgent $(loading~spin)";
+    }
 }
 
 // Stop the timer and update the webview
@@ -326,11 +437,23 @@ function stopTimer(): void {
     timerStarted = false;
     outputChannel.appendLine(`[${new Date().toISOString()}] Stop message detected, stopping timer`);
     
+    // Reset status bar
+    statusBarItem.text = "$(gamepad) Playgent";
+    statusBarItem.tooltip = "Playgent: Take a break while waiting for Copilot";
+    
     // Update webview with final time
     if (webviewPanel) {
         webviewPanel.webview.postMessage({ 
             type: 'stopGame'
         });
+        
+        // Schedule webview to close after allowing time for the game to show the final score
+        setTimeout(() => {
+            if (webviewPanel) {
+                webviewPanel.dispose();
+                webviewPanel = undefined;
+            }
+        }, 2000);
     }
     
     // Clear the interval
@@ -338,6 +461,9 @@ function stopTimer(): void {
         clearInterval(timerInterval);
         timerInterval = undefined;
     }
+    
+    // Show toast notification
+    vscode.window.showInformationMessage('Copilot has completed its task!');
 }
 
 // Reset timer to initial state
@@ -350,26 +476,11 @@ function resetTimer(): void {
         timerInterval = undefined;
     }
     
-    if (webviewPanel) {
-        updateWebviewTimer('Timer reset, waiting for new activity');
-    }
+    // Reset status bar
+    statusBarItem.text = "$(gamepad) Playgent";
+    statusBarItem.tooltip = "Playgent: Take a break while waiting for Copilot";
     
     outputChannel.appendLine(`[${new Date().toISOString()}] Timer reset`);
-}
-
-// Update the webview with the current timer value
-function updateWebviewTimer(statusText: string): void {
-    if (webviewPanel) {
-        const elapsedMs = timerStarted ? (Date.now() - timerStartTime) : 0;
-        const minutes = Math.floor(elapsedMs / 60000).toString().padStart(2, '0');
-        const seconds = Math.floor((elapsedMs % 60000) / 1000).toString().padStart(2, '0');
-        
-        webviewPanel.webview.postMessage({ 
-            type: 'update',
-            time: `${minutes}:${seconds}`,
-            status: statusText
-        });
-    }
 }
 
 /**
@@ -383,16 +494,16 @@ async function findAndMonitorCopilotLogs(): Promise<void> {
             
             if (!logFile) {
                 outputChannel.appendLine(`[${new Date().toISOString()}] No Copilot Chat log files found`);
-                statusBarItem.text = "$(copilot) No logs found";
+                statusBarItem.text = "$(gamepad) Playgent";
+                statusBarItem.tooltip = "Playgent: No Copilot logs found";
+                vscode.window.showWarningMessage('Playgent could not find Copilot log files');
                 return;
             }
             
             currentLogFile = logFile;
             outputChannel.appendLine(`[${new Date().toISOString()}] Found Copilot Chat log file: ${logFile}`);
-            statusBarItem.text = "$(copilot) Monitoring logs";
-            
-            // Initial read of the log file
-            readLogFile(logFile);
+            statusBarItem.text = "$(gamepad) Playgent";
+            statusBarItem.tooltip = "Playgent: Monitoring Copilot activity";
         }
         
         // Set up watcher if not already watching this file
@@ -412,7 +523,7 @@ async function findAndMonitorCopilotLogs(): Promise<void> {
                         if (currentLogFile) {
                             readLogFile(currentLogFile);
                         }
-                    }, 1000); // Check every second as requested
+                    }, 1000); // Check every second
                 }
                 
                 outputChannel.appendLine(`[${new Date().toISOString()}] Started monitoring log file for changes`);
@@ -432,7 +543,9 @@ async function findAndMonitorCopilotLogs(): Promise<void> {
         }
     } catch (error) {
         outputChannel.appendLine(`[${new Date().toISOString()}] Error finding logs: ${error}`);
-        statusBarItem.text = "$(copilot) Error finding logs";
+        statusBarItem.text = "$(gamepad) Playgent (!!)";
+        statusBarItem.tooltip = "Playgent: Error finding logs";
+        vscode.window.showErrorMessage('Playgent encountered an error while finding Copilot logs');
     }
 }
 
@@ -562,11 +675,7 @@ function readLogFile(filePath: string): void {
         fs.closeSync(fileDescriptor);
         
         // Update last position
-        const oldPosition = lastPosition;
         lastPosition = stats.size;
-        
-        // Debugging info
-        // outputChannel.appendLine(`[${new Date().toISOString()}] Reading ${buffer.length} bytes from position ${oldPosition} to ${lastPosition}`);
         
         // Convert buffer to string and process content
         const content = buffer.toString('utf8');
@@ -599,7 +708,6 @@ function processLogContent(content: string): void {
         }
         
         // Filter for interesting log entries
-        // Modify these filters based on what you want to see
         if (
             line.includes('copilot') || 
             line.includes('chat') || 
@@ -612,11 +720,16 @@ function processLogContent(content: string): void {
         }
     }
     
-    if (foundInteresting) {
+    if (foundInteresting && !timerStarted) {
         // Update status bar with recent activity
-        statusBarItem.text = "$(copilot) Activity detected";
+        const currentText = statusBarItem.text;
+        statusBarItem.text = "$(gamepad) Playgent $(check)";
+        statusBarItem.tooltip = "Playgent: Copilot activity detected";
+        
+        // Reset back after a short delay
         setTimeout(() => {
-            statusBarItem.text = "$(copilot) Monitoring logs";
+            statusBarItem.text = "$(gamepad) Playgent";
+            statusBarItem.tooltip = "Playgent: Monitoring Copilot activity";
         }, 3000);
     }
 }
@@ -634,13 +747,7 @@ async function pathExists(p: string): Promise<boolean> {
 }
 
 export function deactivate() {
-    if (logFileWatcher) {
-        logFileWatcher.close();
-    }
-    
-    if (filePollingInterval) {
-        clearInterval(filePollingInterval);
-    }
+    stopMonitoring();
     
     if (timerInterval) {
         clearInterval(timerInterval);
