@@ -3,7 +3,7 @@
   "displayName": "Playgent",
   "description": "Take short game breaks while waiting for GitHub Copilot responses",
   "version": "0.1.0",
-  "publisher": "vscode-samples",
+  "publisher": "idofrizler",
   "private": true,
   "license": "MIT",
   "repository": {
