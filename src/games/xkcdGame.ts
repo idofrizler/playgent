@@ -35,9 +35,10 @@ export class XkcdGame implements CopilotGame {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: var(--vscode-editor-background);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.8), rgba(50, 50, 50, 0.8));
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
         }
         
         .comic-display {
@@ -67,8 +68,9 @@ export class XkcdGame implements CopilotGame {
         .comic-image {
             max-width: 100%;
             max-height: 500px;
-            border: 2px solid var(--vscode-editor-lineHighlightBorder);
-            border-radius: 4px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
         
         .hidden {
@@ -99,18 +101,18 @@ export class XkcdGame implements CopilotGame {
         }
         
         .comic-button {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
+            background: linear-gradient(135deg, #2196F3, #21CBF3);
+            color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border-radius: 8px;
             font-size: 16px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background 0.3s ease;
         }
         
         .comic-button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+            background: linear-gradient(135deg, #1976D2, #2196F3);
         }
         
         .loading-spinner {
@@ -126,11 +128,11 @@ export class XkcdGame implements CopilotGame {
         }
         
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            border-top: 4px solid var(--vscode-button-background);
+            border-top: 5px solid #2196F3;
             animation: spin 1s linear infinite;
         }
         
