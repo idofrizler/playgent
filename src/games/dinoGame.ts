@@ -12,7 +12,7 @@ export class DinoGame implements CopilotGame {
         return `
         <div class="dino-container">
             <div class="dino-header">
-                <div class="dino-title">Dino Runner</div>
+                <div class="dino-title">Robot Runner</div>
                 <div class="dino-subtitle">Jump to survive</div>
             </div>
             
