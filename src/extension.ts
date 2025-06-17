@@ -7,19 +7,29 @@ import { DinoGame } from './games/dinoGame';
 import { MemoryGame } from './games/memoryGame';
 import { XkcdGame } from './games/xkcdGame';
 import { SimonGame } from './games/simonGame';
+import { BreakoutGame } from './games/breakoutGame';
 
 // Extension state
 let outputChannel: vscode.OutputChannel;
 let statusBarItem: vscode.StatusBarItem;
-let logFileWatcher: fs.FSWatcher | undefined;
-let lastPosition: number = 0;
-let currentLogFile: string | undefined;
+let logFileWatchers: Map<string, fs.FSWatcher> = new Map();
+let logFilePositions: Map<string, number> = new Map();
+let activeLogFiles: string[] = [];
 let filePollingInterval: NodeJS.Timeout | undefined;
 let webviewPanel: vscode.WebviewPanel | undefined;
 let timerStarted: boolean = false;
 let timerStartTime: number = 0;
 let timerInterval: NodeJS.Timeout | undefined;
 let currentGame: CopilotGame | undefined;
+let extensionUri: vscode.Uri; // Store extension URI globally
+
+// Enhanced logging for debugging
+interface LogFileInfo {
+    path: string;
+    windowId: string;
+    lastActivity: Date;
+    isActive: boolean;
+}
 
 // Config settings
 const CONFIG_SECTION = 'playgent';
@@ -30,10 +40,14 @@ function registerGames() {
     GameRegistry.registerGame(new MemoryGame());
     GameRegistry.registerGame(new XkcdGame());
     GameRegistry.registerGame(new SimonGame());
+    GameRegistry.registerGame(new BreakoutGame());
     // Add new games here
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    // Store extension URI globally
+    extensionUri = context.extensionUri;
+    
     // Register games
     registerGames();
     
@@ -50,8 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.command = 'playgent.showGame';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
-    
-    // Register commands
+      // Register commands
     context.subscriptions.push(
         vscode.commands.registerCommand('playgent.findLogs', () => {
             findAndMonitorCopilotLogs();
@@ -63,6 +76,9 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('playgent.selectGame', async () => {
             await selectGame(context.extensionUri);
+        }),
+        vscode.commands.registerCommand('playgent.showMonitoringStatus', () => {
+            showMonitoringStatus();
         })
     );
     
@@ -129,15 +145,20 @@ function stopMonitoring(): void {
         clearInterval(filePollingInterval);
         filePollingInterval = undefined;
     }
-    if (logFileWatcher) {
-        logFileWatcher.close();
-        logFileWatcher = undefined;
-    }
+    
+    // Close all file watchers
+    logFileWatchers.forEach((watcher, filePath) => {
+        outputChannel.appendLine(`[${new Date().toISOString()}] Stopping monitor for: ${filePath}`);
+        watcher.close();
+    });
+    logFileWatchers.clear();
+    logFilePositions.clear();
+    activeLogFiles = [];
     
     statusBarItem.text = "$(gamepad) Playgent";
     statusBarItem.tooltip = "Playgent: Take a break while waiting for Copilot";
     
-    outputChannel.appendLine(`[${new Date().toISOString()}] Stopped monitoring Copilot logs`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Stopped monitoring all Copilot logs`);
 }
 
 /**
@@ -394,26 +415,37 @@ function getWebviewContent(extensionUri: vscode.Uri): string {
     </html>`;
 }
 
-// Start the timer and update the webview
+// Start the timer and open the game window
 function startTimer(): void {
     if (timerStarted) {
-        return; // Don't start if already running
+        // If timer is already started, just ensure the game window is open
+        if (!webviewPanel) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] 📱 Timer running but window was closed, reopening game window`);
+            createOrShowWebviewPanel(extensionUri);
+        } else {
+            outputChannel.appendLine(`[${new Date().toISOString()}] ⚠️ Timer already started, game window already open`);
+        }
+        return;
     }
 
     timerStarted = true;
     timerStartTime = Date.now();
-    outputChannel.appendLine(`[${new Date().toISOString()}] Tool call detected, starting timer`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] 🎮 Tool call detected, starting timer and opening game window`);
     
     // Update status bar
     statusBarItem.text = "$(gamepad) Playgent $(loading~spin)";
-    statusBarItem.tooltip = "Playgent: Copilot activity in progress";
+    statusBarItem.tooltip = "Playgent: Copilot activity in progress - Game window opening";
     
-    // Create webview if it doesn't exist
+    // Open the game window if it doesn't exist
     if (!webviewPanel) {
-        createOrShowWebviewPanel(vscode.Uri.file(path.dirname(path.dirname(__filename))));
+        outputChannel.appendLine(`[${new Date().toISOString()}] 📱 Opening Playgent game window`);
+        createOrShowWebviewPanel(extensionUri);
+    } else {
+        outputChannel.appendLine(`[${new Date().toISOString()}] 📱 Game window already open, revealing it`);
+        webviewPanel.reveal(vscode.ViewColumn.One);
     }
     
-    // Start timer interval
+    // Start timer interval for status bar animation
     timerInterval = setInterval(() => {
         updateStatusBar();
     }, 1000);
@@ -488,63 +520,45 @@ function resetTimer(): void {
 }
 
 /**
- * Find and start monitoring the Copilot Chat log files
+ * Find and start monitoring ALL Copilot Chat log files
  */
 async function findAndMonitorCopilotLogs(): Promise<void> {
     try {
-        // Only search for the log file if we don't already have one
-        if (!currentLogFile) {
-            const logFile = await findLatestCopilotLogFile();
-            
-            if (!logFile) {
-                outputChannel.appendLine(`[${new Date().toISOString()}] No Copilot Chat log files found`);
-                statusBarItem.text = "$(gamepad) Playgent";
-                statusBarItem.tooltip = "Playgent: No Copilot logs found";
-                vscode.window.showWarningMessage('Playgent could not find Copilot log files');
-                return;
-            }
-            
-            currentLogFile = logFile;
-            outputChannel.appendLine(`[${new Date().toISOString()}] Found Copilot Chat log file: ${logFile}`);
+        const logFiles = await findAllCopilotLogFiles();
+        
+        if (logFiles.length === 0) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] No Copilot Chat log files found`);
             statusBarItem.text = "$(gamepad) Playgent";
-            statusBarItem.tooltip = "Playgent: Monitoring Copilot activity";
+            statusBarItem.tooltip = "Playgent: No Copilot logs found";
+            vscode.window.showWarningMessage('Playgent could not find Copilot log files');
+            return;
         }
         
-        // Set up watcher if not already watching this file
-        if (!logFileWatcher && currentLogFile) {
-            try {
-                // Use fs.watch for immediate notification of changes
-                logFileWatcher = fs.watch(currentLogFile, (eventType) => {
-                    if (eventType === 'change' && currentLogFile) {
-                        readLogFile(currentLogFile);
-                    }
-                });
-                
-                // Some systems might not reliably trigger fs.watch events
-                // So we also poll the file regularly as a backup
-                if (!filePollingInterval) {
-                    filePollingInterval = setInterval(() => {
-                        if (currentLogFile) {
-                            readLogFile(currentLogFile);
-                        }
-                    }, 1000); // Check every second
-                }
-                
-                outputChannel.appendLine(`[${new Date().toISOString()}] Started monitoring log file for changes`);
-            } catch (error) {
-                outputChannel.appendLine(`[${new Date().toISOString()}] Error setting up file watcher: ${error}`);
-                
-                // Fall back to polling only if watching fails
-                if (!filePollingInterval) {
-                    filePollingInterval = setInterval(() => {
-                        if (currentLogFile) {
-                            readLogFile(currentLogFile);
-                        }
-                    }, 1000);
-                    outputChannel.appendLine(`[${new Date().toISOString()}] Falling back to polling-based monitoring`);
-                }
-            }
+        outputChannel.appendLine(`[${new Date().toISOString()}] Found ${logFiles.length} Copilot Chat log files:`);
+        logFiles.forEach((logFile, index) => {
+            outputChannel.appendLine(`[${new Date().toISOString()}] [${index + 1}] ${logFile.path} (Window: ${logFile.windowId})`);
+        });
+        
+        activeLogFiles = logFiles.map(f => f.path);
+        
+        // Set up watchers for all log files
+        for (const logFile of logFiles) {
+            await setupLogFileMonitoring(logFile);
         }
+        
+        // Set up polling as backup
+        if (!filePollingInterval) {
+            filePollingInterval = setInterval(() => {
+                activeLogFiles.forEach(filePath => {
+                    readLogFile(filePath);
+                });
+            }, 1000); // Check every second
+            outputChannel.appendLine(`[${new Date().toISOString()}] Started polling backup for ${activeLogFiles.length} files`);
+        }
+        
+        statusBarItem.text = "$(gamepad) Playgent";
+        statusBarItem.tooltip = `Playgent: Monitoring ${logFiles.length} Copilot windows`;
+        
     } catch (error) {
         outputChannel.appendLine(`[${new Date().toISOString()}] Error finding logs: ${error}`);
         statusBarItem.text = "$(gamepad) Playgent (!!)";
@@ -554,9 +568,42 @@ async function findAndMonitorCopilotLogs(): Promise<void> {
 }
 
 /**
- * Find the latest Copilot Chat log file
+ * Set up monitoring for a single log file
  */
-async function findLatestCopilotLogFile(): Promise<string | undefined> {
+async function setupLogFileMonitoring(logFile: LogFileInfo): Promise<void> {
+    const filePath = logFile.path;
+    
+    // Initialize position tracking
+    try {
+        const stats = fs.statSync(filePath);
+        logFilePositions.set(filePath, stats.size); // Start from end of file
+        outputChannel.appendLine(`[${new Date().toISOString()}] Initialized position for ${logFile.windowId}: ${stats.size} bytes`);
+    } catch (error) {
+        logFilePositions.set(filePath, 0);
+        outputChannel.appendLine(`[${new Date().toISOString()}] Could not get initial size for ${logFile.windowId}, starting from 0`);
+    }
+    
+    // Set up file watcher
+    try {
+        const watcher = fs.watch(filePath, (eventType: string) => {
+            if (eventType === 'change') {
+                outputChannel.appendLine(`[${new Date().toISOString()}] File change detected in ${logFile.windowId}`);
+                readLogFile(filePath);
+            }
+        });
+        
+        logFileWatchers.set(filePath, watcher);
+        outputChannel.appendLine(`[${new Date().toISOString()}] Started watching ${logFile.windowId}`);
+        
+    } catch (error) {
+        outputChannel.appendLine(`[${new Date().toISOString()}] Error setting up watcher for ${logFile.windowId}: ${error}`);
+    }
+}
+
+/**
+ * Find ALL Copilot Chat log files across all windows
+ */
+async function findAllCopilotLogFiles(): Promise<LogFileInfo[]> {
     try {
         // Get the VS Code logs directory
         const appDataDir = process.env.APPDATA || (process.platform === 'darwin' ? 
@@ -577,73 +624,67 @@ async function findLatestCopilotLogFile(): Promise<string | undefined> {
             .reverse();
         
         if (sortedDirs.length === 0) {
-            return undefined;
+            return [];
         }
 
-        // For each date directory, look for window*/exthost/GitHub.copilot-chat directories
-        for (const dateDir of sortedDirs) {
+        const allLogFiles: LogFileInfo[] = [];
+
+        // For each date directory (check recent ones), look for ALL window*/exthost/GitHub.copilot-chat directories
+        for (const dateDir of sortedDirs.slice(0, 2)) { // Check only the 2 most recent days
             const dateDirPath = path.join(baseLogDir, dateDir);
             
-            // Get window directories and their stats
-            const windowDirs = await fs.promises.readdir(dateDirPath);
-            const windowDirsFiltered = windowDirs.filter(dir => dir.startsWith('window'));
-            
-            if (windowDirsFiltered.length === 0) {
-                continue;
-            }
-            
-            // Get stats for each window directory to find the latest one
-            const windowDirStats = await Promise.all(
-                windowDirsFiltered.map(async (dir) => {
-                    const fullPath = path.join(dateDirPath, dir);
+            try {                // Get window directories
+                const windowDirs = await fs.promises.readdir(dateDirPath);
+                const windowDirsFiltered = windowDirs.filter(dir => dir.startsWith('window'));
+                
+                outputChannel.appendLine(`[${new Date().toISOString()}] Checking date ${dateDir}: found ${windowDirsFiltered.length} windows`);
+                
+                // Check each window directory
+                for (const windowDir of windowDirsFiltered) {
+                    const windowPath = path.join(dateDirPath, windowDir);
+                    const extHostPath = path.join(windowPath, 'exthost', 'GitHub.copilot-chat');
+                    
                     try {
-                        const stats = await fs.promises.stat(fullPath);
-                        return {
-                            name: dir,
-                            path: fullPath,
-                            mtime: stats.mtime,
-                            extHostPath: path.join(fullPath, 'exthost', 'GitHub.copilot-chat')
-                        };
-                    } catch (error) {
-                        return null;
-                    }
-                })
-            );
-            
-            // Filter out any null entries and sort by modification time (newest first)
-            const validWindowDirs = windowDirStats
-                .filter(item => item !== null)
-                .sort((a, b) => b!.mtime.getTime() - a!.mtime.getTime());
-                
-            outputChannel.appendLine(`[${new Date().toISOString()}] Found ${validWindowDirs.length} window directories in ${dateDir}`);
-            
-            // Check each window directory in order (newest first)
-            for (const windowDir of validWindowDirs) {
-                if (!windowDir) continue;
-                
-                try {
-                    // Check if the GitHub.copilot-chat directory exists
-                    if (await pathExists(windowDir.extHostPath)) {
-                        const files = await fs.promises.readdir(windowDir.extHostPath);
-                        const logFile = files.find(file => file.endsWith('.log'));
-                        
-                        if (logFile) {
-                            const logFilePath = path.join(windowDir.extHostPath, logFile);
-                            outputChannel.appendLine(`[${new Date().toISOString()}] Found log file in window directory: ${windowDir.name}`);
-                            return logFilePath;
+                        if (await pathExists(extHostPath)) {
+                            const files = await fs.promises.readdir(extHostPath);
+                            const logFile = files.find(file => file.endsWith('.log'));
+                            
+                            if (logFile) {
+                                const logFilePath = path.join(extHostPath, logFile);
+                                const stats = await fs.promises.stat(logFilePath);
+                                
+                                // Only include files that have been modified recently (within last 24 hours)
+                                const hoursSinceModified = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60);
+                                
+                                if (hoursSinceModified < 24) {
+                                    allLogFiles.push({
+                                        path: logFilePath,
+                                        windowId: `${dateDir}/${windowDir}`,
+                                        lastActivity: stats.mtime,
+                                        isActive: hoursSinceModified < 1 // Active if modified within last hour
+                                    });
+                                    
+                                    outputChannel.appendLine(`[${new Date().toISOString()}] Found active log: ${windowDir} (${hoursSinceModified.toFixed(1)}h ago, ${stats.size} bytes)`);
+                                }
+                            }
                         }
+                    } catch (error) {
+                        // Skip this window if there's an error
+                        continue;
                     }
-                } catch (error) {
-                    // Continue to next window directory if there's an error
-                    continue;
                 }
+            } catch (error) {
+                outputChannel.appendLine(`[${new Date().toISOString()}] Error reading date directory ${dateDir}: ${error}`);
+                continue;
             }
         }
         
-        return undefined;
-    } catch (error) {
-        outputChannel.appendLine(`[${new Date().toISOString()}] Error searching for log files: ${error}`);
-        return undefined;
+        // Sort by last activity (most recent first)
+        allLogFiles.sort((a, b) => b.lastActivity.getTime() - a.lastActivity.getTime());
+        
+        return allLogFiles;    } catch (error) {
+        outputChannel.appendLine(`[${new Date().toISOString()}] Error searching for all log files: ${error}`);
+        return [];
     }
 }
 
@@ -659,11 +700,14 @@ function readLogFile(filePath: string): void {
             return;
         }
         
+        // Get the last position for this file
+        const lastPosition = logFilePositions.get(filePath) || 0;
+        
         // If the file size is smaller than our last position, 
         // the file might have been truncated/rotated
         if (stats.size < lastPosition) {
-            outputChannel.appendLine(`[${new Date().toISOString()}] Log file appears to have been truncated, resetting position`);
-            lastPosition = 0;
+            outputChannel.appendLine(`[${new Date().toISOString()}] Log file ${filePath} appears to have been truncated, resetting position`);
+            logFilePositions.set(filePath, 0);
         }
         
         // If nothing new to read, don't continue
@@ -678,26 +722,30 @@ function readLogFile(filePath: string): void {
         fs.readSync(fileDescriptor, buffer, 0, buffer.length, lastPosition);
         fs.closeSync(fileDescriptor);
         
-        // Update last position
-        lastPosition = stats.size;
+        // Update last position for this file
+        logFilePositions.set(filePath, stats.size);
         
         // Convert buffer to string and process content
         const content = buffer.toString('utf8');
         if (content.trim()) {
-            processLogContent(content);
+            processLogContent(content, filePath);
         }
     } catch (error) {
-        outputChannel.appendLine(`[${new Date().toISOString()}] Error reading log file: ${error}`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] Error reading log file ${filePath}: ${error}`);
     }
 }
 
 /**
  * Process and filter log content
  */
-function processLogContent(content: string): void {
+function processLogContent(content: string, filePath: string): void {
     // Split content into lines
     const lines = content.split(/\r?\n/);
     let foundInteresting = false;
+    
+    // Extract window ID from file path for logging
+    const windowMatch = filePath.match(/window\d+/);
+    const windowId = windowMatch ? windowMatch[0] : 'unknown';
     
     for (const line of lines) {
         if (!line.trim()) {
@@ -706,29 +754,32 @@ function processLogContent(content: string): void {
                 
         // Look for timer start/stop messages
         if (line.includes('message 0 returned. finish reason: [tool_calls]')) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] ⚡ TOOL_CALLS detected in ${windowId}: Starting timer`);
             startTimer();
         } else if (line.includes('message 0 returned. finish reason: [stop]') && timerStarted) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] 🛑 STOP detected in ${windowId}: Stopping timer`);
             stopTimer();
         }
         
         // Filter for interesting log entries
         if (
+            line.includes('message 0 returned') ||
+            line.includes('finish reason') ||
+            line.includes('tool_calls') ||
+            line.includes('request done') ||
             line.includes('copilot') || 
             line.includes('chat') || 
-            line.includes('completion') ||
-            line.includes('request') ||
-            line.includes('response')
+            line.includes('completion')
         ) {
-            outputChannel.appendLine(line);
+            outputChannel.appendLine(`[${windowId}] ${line}`);
             foundInteresting = true;
         }
     }
     
     if (foundInteresting && !timerStarted) {
         // Update status bar with recent activity
-        const currentText = statusBarItem.text;
         statusBarItem.text = "$(gamepad) Playgent $(check)";
-        statusBarItem.tooltip = "Playgent: Copilot activity detected";
+        statusBarItem.tooltip = `Playgent: Activity detected in ${windowId}`;
         
         // Reset back after a short delay
         setTimeout(() => {
@@ -768,4 +819,36 @@ export function deactivate() {
     if (webviewPanel) {
         webviewPanel.dispose();
     }
+}
+
+/**
+ * Show the current monitoring status for debugging
+ */
+function showMonitoringStatus(): void {
+    outputChannel.show();
+    outputChannel.appendLine(`[${new Date().toISOString()}] === PLAYGENT MONITORING STATUS ===`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Timer Started: ${timerStarted}`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Active Log Files: ${activeLogFiles.length}`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Watchers: ${logFileWatchers.size}`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Positions tracked: ${logFilePositions.size}`);
+    
+    activeLogFiles.forEach((filePath, index) => {
+        const position = logFilePositions.get(filePath) || 0;
+        const windowMatch = filePath.match(/window\d+/);
+        const windowId = windowMatch ? windowMatch[0] : 'unknown';
+        const hasWatcher = logFileWatchers.has(filePath);
+        
+        try {
+            const stats = fs.statSync(filePath);
+            const size = stats.size;
+            const mtime = stats.mtime.toLocaleString();
+            outputChannel.appendLine(`[${new Date().toISOString()}] [${index + 1}] ${windowId}: ${size} bytes, pos: ${position}, watcher: ${hasWatcher}, modified: ${mtime}`);
+        } catch (error) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] [${index + 1}] ${windowId}: ERROR - ${error}`);
+        }
+    });
+    
+    outputChannel.appendLine(`[${new Date().toISOString()}] === END STATUS ===`);
+    
+    vscode.window.showInformationMessage(`Monitoring ${activeLogFiles.length} Copilot windows. Check Output > Playgent for details.`);
 }

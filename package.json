@@ -18,8 +18,7 @@
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
+  "contributes": {    "commands": [
       {
         "command": "playgent.showGame",
         "title": "Playgent: Open Game Window"
@@ -31,6 +30,10 @@
       {
         "command": "playgent.findLogs",
         "title": "Playgent: Monitor Copilot Activity"
+      },
+      {
+        "command": "playgent.showMonitoringStatus",
+        "title": "Playgent: Show Monitoring Status"
       }
     ],
     "configuration": {
