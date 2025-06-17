@@ -6,6 +6,7 @@ import { CopilotGame, GameRegistry } from './gameInterface';
 import { DinoGame } from './games/dinoGame';
 import { MemoryGame } from './games/memoryGame';
 import { XkcdGame } from './games/xkcdGame';
+import { SimonGame } from './games/simonGame';
 
 // Extension state
 let outputChannel: vscode.OutputChannel;
@@ -28,6 +29,7 @@ function registerGames() {
     GameRegistry.registerGame(new DinoGame());
     GameRegistry.registerGame(new MemoryGame());
     GameRegistry.registerGame(new XkcdGame());
+    GameRegistry.registerGame(new SimonGame());
     // Add new games here
 }
 
