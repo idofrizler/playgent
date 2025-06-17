@@ -1,666 +1,875 @@
 import { CopilotGame } from '../gameInterface';
 
 /**
- * Enhanced dinosaur jumping game similar to Chrome's offline game
+ * Modern Dino Runner game with polished UX and smooth animations
  */
 export class DinoGame implements CopilotGame {
-    id = 'dino-game';
-    name = 'Dino Runner';
-    description = 'Jump over obstacles with the spacebar';
+    id = 'robot-runner';
+    name = 'Robot Runner';
+    description = 'Jump over obstacles and survive as long as you can as a robot';
     
     getHtmlContent(): string {
         return `
-        <div class="game-world">
-            <div class="sky">
-                <div class="cloud cloud1"></div>
-                <div class="cloud cloud2"></div>
-                <div class="cloud cloud3"></div>
-                <div class="sun"></div>
+        <div class="dino-container">
+            <div class="dino-header">
+                <div class="dino-title">Dino Runner</div>
+                <div class="dino-subtitle">Jump to survive</div>
             </div>
-            <div class="game-container" id="gameContainer">
-                <div class="score-display">
-                    <div class="score">Score: <span id="score">0</span></div>
-                    <div class="top-score">Best: <span id="topScore">0</span></div>
+            
+            <div class="dino-stats">
+                <div class="dino-stat">
+                    <div class="dino-stat-label">Score</div>
+                    <div class="dino-stat-value" id="dino-score">0</div>
                 </div>
-                <div class="dino" id="dino">
-                    <div class="eye"></div>
-                    <div class="mouth"></div>
-                    <div class="leg leg-left"></div>
-                    <div class="leg leg-right"></div>
-                    <div class="arm"></div>
-                    <div class="tail"></div>
+                <div class="dino-stat">
+                    <div class="dino-stat-label">Speed</div>
+                    <div class="dino-stat-value" id="dino-speed">1x</div>
                 </div>
-                <div class="ground"></div>
-                <div class="cactus obstacle" id="obstacle"></div>
-                <div class="initial-message" id="initialMessage">Press SPACE to Start</div>
+                <div class="dino-stat">
+                    <div class="dino-stat-label">Best</div>
+                    <div class="dino-stat-value" id="dino-best">0</div>
+                </div>
             </div>
-            <div class="final-score" id="finalScore">Game Over<br><span id="finalScoreValue">0</span></div>
-            <div class="controls">
-                <div class="control-hint">SPACE: Jump</div>
+            
+            <div class="dino-game-world" id="dino-game-world">
+                <div class="dino-background">
+                    <div class="dino-cloud" style="left: 10%; animation-delay: 0s;"></div>
+                    <div class="dino-cloud" style="left: 30%; animation-delay: -5s;"></div>
+                    <div class="dino-cloud" style="left: 60%; animation-delay: -10s;"></div>
+                    <div class="dino-cloud" style="left: 80%; animation-delay: -15s;"></div>
+                </div>
+                
+                <div class="dino-ground-line"></div>
+                
+                <div class="dino-player" id="dino-player">
+                    <div class="dino-body">
+                        <div class="dino-head">
+                            <div class="dino-eye"></div>
+                            <div class="dino-mouth"></div>
+                        </div>
+                        <div class="dino-torso"></div>
+                        <div class="dino-legs">
+                            <div class="dino-leg dino-leg-1"></div>
+                            <div class="dino-leg dino-leg-2"></div>
+                        </div>
+                        <div class="dino-tail"></div>
+                    </div>
+                </div>
+                
+                <div class="dino-obstacles" id="dino-obstacles"></div>
+                
+                <div class="dino-overlay" id="dino-overlay">
+                    <div class="dino-overlay-content">
+                        <div class="dino-status" id="dino-status">Ready to run?</div>
+                        <div class="dino-instructions">Press SPACE to jump or ↓ to duck</div>
+                        <button class="dino-start-btn" id="dino-start">Start Game</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dino-controls">
+                <div class="dino-control-hint">
+                    <div class="dino-key">SPACE</div>
+                    <div class="dino-action">Jump</div>
+                </div>
+                <div class="dino-control-hint">
+                    <div class="dino-key">↓</div>
+                    <div class="dino-action">Duck</div>
+                </div>
             </div>
         </div>
         `;
-    }
-    
-    getCssContent(): string {
+    }    getCssContent(): string {
         return `
-        /* Reset specific to VS Code webview */
-        .game-world * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        .game-world {
+        .dino-container {
             width: 100%;
-            max-width: 800px;
-            height: 100%;
-            max-height: 800px;
-            margin: 20px auto;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .sky {
-            position: relative;
-            width: 100%;
-            height: 100px;
-            background: linear-gradient(to bottom, #65a9f0, #afe2ff);
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-            display: block;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .game-container {
-            width: 100%;
-            height: 320px; /* Adjusted height */
-            background-color: #f5f5f5;
-            position: relative;
-            overflow: hidden;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border: 2px solid #e0e0e0;
-            margin: 0;
-            padding: 0;
-            display: block;
-        }
-        
-        .sun {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #ffeb3b;
-            border-radius: 50%;
-            top: 15px;
-            right: 60px;
-            box-shadow: 0 0 20px rgba(255, 235, 59, 0.7);
-        }
-        
-        .cloud {
-            position: absolute;
-            background: #fff;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.9), rgba(50, 50, 50, 0.9));
             border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
         }
         
-        .cloud:before, .cloud:after {
-            content: '';
+        .dino-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .dino-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--vscode-foreground);
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .dino-subtitle {
+            font-size: 16px;
+            color: var(--vscode-descriptionForeground);
+            opacity: 0.8;
+        }
+        
+        .dino-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .dino-stat {
+            text-align: center;
+        }
+        
+        .dino-stat-label {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .dino-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--vscode-textLink-foreground);
+        }
+        
+        .dino-game-world {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 60%, #DEB887 60%, #D2B48C 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dino-background {
             position: absolute;
-            background: #fff;
-            border-radius: 50%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
         }
         
-        .cloud1 {
+        .dino-cloud {
+            position: absolute;
+            top: 20px;
             width: 60px;
             height: 20px;
-            top: 20px;
-            left: 20px;
-            opacity: 0.9;
-            animation: cloudMove1 30s linear infinite;
+            background: white;
+            border-radius: 20px;
+            opacity: 0.8;
+            animation: dino-cloud-float 20s linear infinite;
         }
         
-        .cloud1:before {
+        .dino-cloud:before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 15px;
             width: 30px;
             height: 30px;
-            top: -15px;
-            left: 10px;
+            background: white;
+            border-radius: 50%;
         }
         
-        .cloud1:after {
-            width: 20px;
-            height: 20px;
-            top: -10px;
-            right: 10px;
-        }
-        
-        .cloud2 {
-            width: 50px;
-            height: 20px;
-            top: 35px;
-            left: 180px;
-            opacity: 0.7;
-            animation: cloudMove2 40s linear infinite;
-        }
-        
-        .cloud2:before {
-            width: 25px;
-            height: 25px;
-            top: -12px;
-            left: 8px;
-        }
-        
-        .cloud2:after {
-            width: 15px;
-            height: 15px;
-            top: -8px;
-            right: 8px;
-        }
-        
-        .cloud3 {
-            width: 55px;
-            height: 22px;
-            top: 15px;
-            left: 300px;
-            opacity: 0.8;
-            animation: cloudMove3 50s linear infinite;
-        }
-        
-        .cloud3:before {
-            width: 26px;
-            height: 26px;
-            top: -13px;
-            left: 10px;
-        }
-        
-        .cloud3:after {
-            width: 18px;
-            height: 18px;
-            top: -9px;
-            right: 10px;
-        }
-        
-        @keyframes cloudMove1 {
-            from { left: -100px; }
-            to { left: 100%; }
-        }
-        
-        @keyframes cloudMove2 {
-            from { left: -80px; }
-            to { left: 100%; }
-        }
-        
-        @keyframes cloudMove3 {
-            from { left: -120px; }
-            to { left: 100%; }
-        }
-        
-        .ground {
-            position: absolute;
-            width: 100%;
-            height: 30px; /* Reduced from 60px to 30px */
-            background: linear-gradient(to bottom, #a67c52, #7d5a3c);
-            bottom: 0;
-        }
-        
-        .ground:before {
+        .dino-cloud:after {
             content: '';
             position: absolute;
-            width: 100%;
-            height: 6px; /* Reduced from 10px to 6px */
-            background: #8B4513;
-            bottom: 0;
-            opacity: 0.5;
-        }
-        
-        .dino {
-            width: 44px; /* Slightly adjusted for better proportions */
-            height: 60px; /* Kept same height */
-            background-color: #526e33; /* More dinosaur-like green color */
-            position: absolute;
-            left: 50px;
-            border-radius: 50% 60% 20% 20%; /* Adjusted for dino-like shape */
-            transition: transform 0.05s;
-            z-index: 100; /* Ensure dino is above other elements */
-        }
-        
-        .dino .eye {
-            width: 8px;
-            height: 8px;
-            background-color: white;
-            border-radius: 50%;
-            position: absolute;
-            top: 10px;
-            right: 8px;
-        }
-        
-        .dino .eye:after {
-            content: '';
-            width: 4px;
-            height: 4px;
-            background-color: black;
-            border-radius: 50%;
-            position: absolute;
-            top: 2px;
-            right: 1px;
-        }
-        
-        .dino .mouth {
+            top: -5px;
+            right: 15px;
             width: 20px;
-            height: 6px;
-            background-color: #b33a3a;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        @keyframes dino-cloud-float {
+            0% { transform: translateX(-80px); }
+            100% { transform: translateX(calc(100vw + 80px)); }
+        }
+          .dino-ground-line {
             position: absolute;
-            bottom: 16px;
+            bottom: 80px;
+            left: 0;
             right: 0;
-            border-radius: 0 0 10px 10px;
+            height: 2px;
+            background: rgba(0, 0, 0, 0.2);
         }
-        
-        .dino .leg {
-            width: 10px;
-            height: 20px;
-            background-color: #425a29; /* Matching green */
+          .dino-player {
             position: absolute;
-            bottom: -20px;
-            border-radius: 5px;
-        }
-        
-        .dino .leg-left {
-            left: 8px;
-        }
-        
-        .dino .leg-right {
-            right: 8px;
-        }
-        
-        .dino .arm {
-            width: 8px;
-            height: 12px;
-            background-color: #425a29; /* Matching green */
-            position: absolute;
-            top: 28px;
-            right: 5px;
-            border-radius: 4px;
-        }
-        
-        .dino .tail {
-            width: 20px;
-            height: 12px;
-            background-color: #526e33; /* Same as dino body */
-            position: absolute;
-            top: 30px;
-            left: -15px;
-            border-radius: 10px 0 0 10px;
-        }
-        
-        .dino.running .leg-left {
-            animation: legMove 0.4s infinite;
-        }
-        
-        .dino.running .leg-right {
-            animation: legMove 0.4s infinite 0.2s;
-        }
-        
-        @keyframes legMove {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-        }
-        
-        .obstacle {
-            position: absolute;
-            bottom: -110px; /* Position obstacles directly on the ground */
-            right: 0px; /* Starting offscreen */
-        }
-        
-        .cactus {
-            width: 25px; /* Slightly smaller cactus */
-            height: 60px; /* Slightly smaller cactus */
-            background-color: #27ae60;
-            border-radius: 5px;
-            position: relative;
-        }
-        
-        .cactus:before, .cactus:after {
-            content: '';
-            position: absolute;
-            width: 12px;
-            height: 25px;
-            background-color: #27ae60;
-            border-radius: 5px;
-        }
-        
-        .cactus:before {
-            top: 12px;
-            left: -8px;
-        }
-        
-        .cactus:after {
-            top: 20px;
-            right: -8px;
-        }
-        
-        .score-display {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-family: 'Courier New', monospace;
-            text-align: right;
-        }
-        
-        .score, .top-score {
-            font-size: 16px; /* Slightly smaller font */
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .top-score {
-            color: #e67e22;
-        }
-        
-        .final-score {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 28px; /* Slightly smaller font */
-            font-weight: bold;
-            color: #e74c3c;
-            text-align: center;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 15px 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            bottom: 80px;
+            left: 50px;
+            width: 70px;
+            height: 80px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 10;
         }
         
-        .initial-message {
+        .dino-player.jumping {
+            bottom: 200px;
+        }
+        
+        .dino-player.ducking {
+            transform: scaleY(0.6);
+            transform-origin: bottom;
+        }
+        
+        .dino-player.running .dino-leg-1,
+        .dino-player.running .dino-leg-2 {
+            animation: dino-run 0.4s infinite;
+        }
+        
+        .dino-player.running .dino-leg-2 {
+            animation-delay: 0.2s;
+        }
+          .dino-body {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }        .dino-head {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 22px; /* Slightly smaller font */
-            font-weight: bold;
-            color: #333;
-            text-align: center;
-            animation: pulse 1.5s infinite;
+            top: 0px;
+            left: 25px;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #C0C0C0, #A9A9A9); /* Changed to silver */
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.4);
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
+        .dino-head:before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 3px;
+            background: linear-gradient(135deg, #42A5F5, #2196F3);
+            border-radius: 1px;
         }
         
-        .controls {
+        .dino-eye {
+            position: absolute;
+            top: 6px;
+            left: 4px;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 1px;
+            box-shadow: inset 1px 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .dino-eye:after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 1px;
+            box-shadow: inset 1px 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .dino-mouth {
+            position: absolute;
+            top: 14px;
+            left: 6px;
+            width: 8px;
+            height: 2px;
+            background: #1976D2;
+            border-radius: 1px;
+        }
+        
+        .dino-torso {
+            position: absolute;
+            top: 18px;
+            left: 20px;
+            width: 30px;
+            height: 40px;
+            background: linear-gradient(135deg, #C0C0C0, #A9A9A9); /* Changed to silver */
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(33, 150, 243, 0.3);
+        }
+        
+        .dino-torso:before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 18px;
+            height: 20px;
+            background: linear-gradient(135deg, #42A5F5, #2196F3);
+            border-radius: 3px;
+        }
+        
+        .dino-torso:after {
+            content: '';
+            position: absolute;
+            top: 28px;
+            left: 10px;
+            width: 10px;
+            height: 8px;
+            background: #42A5F5;
+            border-radius: 2px;
+        }.dino-legs {
+            position: absolute;
+            bottom: 0;
+            left: 25px;
+            width: 20px;
+            height: 22px;
+        }
+          .dino-leg {
+            position: absolute;
+            bottom: 0;
+            width: 8px;
+            height: 22px;
+            background: linear-gradient(135deg, #C0C0C0, #A9A9A9); /* Changed to silver */
+            border-radius: 2px;
+            box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+        }
+        
+        .dino-leg:before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: -1px;
+            width: 10px;
+            height: 4px;
+            background: linear-gradient(135deg, #1976D2, #1565C0);
+            border-radius: 1px;
+        }
+        
+        .dino-leg-1 {
+            left: 2px;
+        }
+        
+        .dino-leg-2 {
+            right: 2px;
+        }
+        
+        @keyframes dino-run {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-5px) scaleY(0.9); }
+        }
+        
+        .dino-tail {
+            display: none;
+        }
+        
+        .dino-obstacles {
+            position: absolute;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            height: 30px;
+        }
+        
+        .dino-obstacle {
+            position: absolute;
+            bottom: 0;
+            width: 20px;
+            height: 30px;
+            background: #8B4513;
+            border-radius: 2px;
+            animation: dino-obstacle-move linear;
+        }
+        
+        .dino-obstacle.cactus {
+            background: #228B22; /* Changed to green */
+        }
+        
+        .dino-obstacle.cactus:before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: -5px;
+            width: 8px;
+            height: 15px;
+            background: #8B4513;
+            border-radius: 2px;
+        }
+        
+        .dino-obstacle.cactus:after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            right: -5px;
+            width: 8px;
+            height: 15px;
+            background: #8B4513;
+            border-radius: 2px;
+        }        .dino-obstacle.bird {
+            width: 30px;
+            height: 15px;
+            background: #FF0000; /* Changed to red */
+            border-radius: 50%;
+            bottom: 90px; /* Further adjusted to align with robot's head */
+        }
+        
+        .dino-obstacle.bird:before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 5px;
+            width: 8px;
+            height: 8px;
+            background: #654321;
+            border-radius: 50% 50% 0 50%;
+            animation: bird-flap 0.2s infinite;
+        }
+        
+        .dino-obstacle.bird:after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background: #654321;
+            border-radius: 50% 50% 50% 0;
+            animation: bird-flap 0.2s infinite reverse;
+        }
+        
+        @keyframes bird-flap {
+            0%, 100% { transform: rotateX(0deg); }
+            50% { transform: rotateX(60deg); }
+        }
+        
+        @keyframes dino-obstacle-move {
+            0% { left: 100%; }
+            100% { left: -50px; }
+        }
+        
+        .dino-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
             display: flex;
             justify-content: center;
-            margin-top: 10px;
-            margin-bottom: 20px; /* Added bottom margin for spacing */
+            align-items: center;
+            transition: all 0.3s ease;
+            z-index: 20;
         }
         
-        .control-hint {
-            background-color: #f1f1f1;
-            border-radius: 5px;
+        .dino-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+        
+        .dino-overlay-content {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .dino-status {
+            font-size: 24px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        .dino-instructions {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+        }
+        
+        .dino-start-btn {
+            background: linear-gradient(145deg, var(--vscode-button-background), var(--vscode-button-hoverBackground));
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 140px;
+        }
+        
+        .dino-start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .dino-start-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .dino-controls {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+        
+        .dino-control-hint {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .dino-key {
             padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+        
+        .dino-action {
             font-size: 14px;
-            margin: 0 5px;
-            font-weight: bold;
-            color: #333;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--vscode-descriptionForeground);
+        }
+        
+        @media (max-width: 700px) {
+            .dino-container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .dino-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .dino-stat {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .dino-stat-label {
+                margin-bottom: 0;
+            }
+            
+            .dino-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
         `;
-    }
-    
+    }    
     getJavaScriptContent(): string {
         return `
-        const dino = document.getElementById('dino');
-        const gameContainer = document.getElementById('gameContainer');
-        const scoreDisplay = document.getElementById('score');
-        const topScoreDisplay = document.getElementById('topScore');
-        const finalScoreDisplay = document.getElementById('finalScore');
-        const finalScoreValue = document.getElementById('finalScoreValue');
-        const initialMessage = document.getElementById('initialMessage');
-        const obstacle = document.getElementById('obstacle');
-        
-        let isJumping = false;
-        let isGameRunning = false;
-        let gravity = 0.9;
-        let score = 0;
-        let topScore = 0;
-        let gameSpeed = 5;
-        let obstacleInterval;
-        let scoreInterval;
-
-        // Define constants for game elements
-        const GROUND_HEIGHT = 30;
-        const CONTAINER_WIDTH = gameContainer ? gameContainer.offsetWidth : 800;
-        const OBSTACLE_START_POSITION = -CONTAINER_WIDTH; // Starting position off-screen to the right, using container width
-
-        // Load top score from local storage
-        if (localStorage.getItem('dinoTopScore')) {
-            topScore = parseInt(localStorage.getItem('dinoTopScore'));
-            topScoreDisplay.textContent = topScore;
-        }
-        
-        // Start game on spacebar
-        document.addEventListener('keydown', function(event) {
-            if (event.code === 'Space') {
-                if (!isGameRunning) {
-                    startGame();
-                } else if (!isJumping) {
-                    jump();
-                }
-                // Prevent page scrolling with spacebar
-                event.preventDefault();
-            }
-        });
-        
-        // Start the game
-        function startGame() {
-            if (isGameRunning) return;
-            
-            isGameRunning = true;
-            initialMessage.style.display = 'none';
-            score = 0;
-            scoreDisplay.textContent = '0';
-            gameSpeed = 5; // Reset game speed on start
-            
-            // Add running animation to dino
-            dino.classList.add('running');
-            
-            // Position dino on the ground
-            dino.style.bottom = GROUND_HEIGHT + 'px';
-            
-            // Reset obstacle position - always start completely off-screen to the right
-            obstacle.style.right = OBSTACLE_START_POSITION + 'px';
-            
-            // Start moving obstacles
-            moveObstacles();
-            
-            // Start score counter
-            scoreInterval = setInterval(function() {
-                score++;
-                scoreDisplay.textContent = score;
+        class DinoGameLogic {
+            constructor() {
+                this.gameWorld = document.getElementById('dino-game-world');
+                this.player = document.getElementById('dino-player');
+                this.obstacles = document.getElementById('dino-obstacles');
+                this.overlay = document.getElementById('dino-overlay');
+                this.startBtn = document.getElementById('dino-start');
+                this.status = document.getElementById('dino-status');
+                this.scoreEl = document.getElementById('dino-score');
+                this.speedEl = document.getElementById('dino-speed');
+                this.bestEl = document.getElementById('dino-best');
                 
-                // Increase game speed gradually
-                if (score % 100 === 0) {
-                    gameSpeed += 0.5;
-                }
-            }, 100);
-        }
-        
-        // Game over function
-        function gameOver() {
-            isGameRunning = false;
-            
-            // Stop animations
-            clearInterval(obstacleInterval);
-            clearInterval(scoreInterval);
-            dino.classList.remove('running');
-            
-            // Update top score if needed
-            if (score > topScore) {
-                topScore = score;
-                localStorage.setItem('dinoTopScore', topScore);
-                topScoreDisplay.textContent = topScore;
+                this.isRunning = false;
+                this.isJumping = false;
+                this.isDucking = false;
+                this.score = 0;
+                this.speed = 1;
+                this.gameSpeed = 3;
+                this.obstacleTimer = 0;
+                this.obstacleDelay = 2000;
+                this.activeObstacles = [];
+                this.animationId = null;
+                
+                this.keys = {
+                    space: false,
+                    down: false
+                };
+                
+                this.loadBestScore();
+                this.bindEvents();
             }
             
-            // Show game over message
-            finalScoreValue.textContent = 'Score: ' + score;
-            finalScoreDisplay.style.display = 'block';
-            
-            // Restart game after a delay
-            setTimeout(() => {
-                initialMessage.textContent = 'Press SPACE to Try Again';
-                initialMessage.style.display = 'block';
-                finalScoreDisplay.style.display = 'none';
-            }, 2000);
-        }
-        
-        // Move obstacles
-        function moveObstacles() {
-            // Get the container width for accurate positioning
-            const containerWidth = gameContainer.offsetWidth;
-            const obstacleWidth = obstacle.offsetWidth;
-            
-            // Initialize obstacle position starting from off-screen to the right
-            let obstaclePos = OBSTACLE_START_POSITION;
-            obstacle.style.right = obstaclePos + 'px';
-
-            obstacleInterval = setInterval(function() {
-                if (!isGameRunning) return;
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.startGame());
                 
-                // Increment position with the current game speed
-                obstaclePos += gameSpeed;
-                
-                // Reset obstacle when it goes off screen to the left
-                if (obstaclePos > containerWidth + obstacleWidth) {
-                    obstaclePos = OBSTACLE_START_POSITION; // Reset to starting position off-screen
-                    obstacle.style.right = obstaclePos + 'px';
-                } else {
-                    obstacle.style.right = obstaclePos + 'px';
-                }
-                
-                // Check for collisions - but only after player has some time to react
-                if (score > 20) { // Wait for 2 seconds (20 score points) before enabling collisions
-                    checkCollision();
-                }
-                
-            }, 20);
-        }
-        
-        // Jump function
-        function jump() {
-            if (isJumping) return;
-            
-            let position = 0;
-            isJumping = true;
-            
-            dino.classList.remove('running');
-            
-            let jumpInterval = setInterval(function() {
-                // Upward movement
-                if (position < 150) { // Jump height
-                    position += 12;
-                    dino.style.bottom = (position + GROUND_HEIGHT) + 'px'; // Use constant for ground height
-                } 
-                // Downward movement
-                else {
-                    clearInterval(jumpInterval);
-                    
-                    let fallInterval = setInterval(function() {
-                        if (position <= 0) {
-                            clearInterval(fallInterval);
-                            isJumping = false;
-                            position = 0;
-                            dino.style.bottom = GROUND_HEIGHT + 'px'; // Use constant for ground height
-                            
-                            // Add running animation back if game is still running
-                            if (isGameRunning) {
-                                dino.classList.add('running');
-                            }
-                        } else {
-                            position -= 10;
-                            position = position * gravity;
-                            dino.style.bottom = (position + GROUND_HEIGHT) + 'px'; // Use constant for ground height
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        this.keys.space = true;
+                        if (!this.isRunning) {
+                            this.startGame();
+                        } else if (!this.isJumping) {
+                            this.jump();
                         }
-                    }, 20);
+                    } else if (e.code === 'ArrowDown') {
+                        e.preventDefault();
+                        this.keys.down = true;
+                        if (this.isRunning && !this.isJumping) {
+                            this.duck();
+                        }
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        this.keys.space = false;
+                    } else if (e.code === 'ArrowDown') {
+                        this.keys.down = false;
+                        if (this.isDucking) {
+                            this.stopDucking();
+                        }
+                    }
+                });
+                
+                // Touch support
+                this.gameWorld.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (!this.isRunning) {
+                        this.startGame();
+                    } else if (!this.isJumping) {
+                        this.jump();
+                    }
+                });
+            }
+            
+            startGame() {
+                if (this.isRunning) return;
+                
+                this.isRunning = true;
+                this.score = 0;
+                this.speed = 1;
+                this.gameSpeed = 3;
+                this.obstacleTimer = 0;
+                this.obstacleDelay = 2000;
+                this.activeObstacles = [];
+                
+                this.hideOverlay();
+                this.player.classList.add('running');
+                this.updateScore();
+                this.updateSpeed();
+                
+                // Clear any existing obstacles
+                this.obstacles.innerHTML = '';
+                
+                this.gameLoop();
+            }
+            
+            gameLoop() {
+                if (!this.isRunning) return;
+                
+                this.obstacleTimer += 16;
+                
+                // Spawn obstacles
+                if (this.obstacleTimer >= this.obstacleDelay) {
+                    this.spawnObstacle();
+                    this.obstacleTimer = 0;
+                    // Decrease delay as game progresses (increase difficulty)
+                    this.obstacleDelay = Math.max(800, this.obstacleDelay - 5);
                 }
-            }, 20);
-        }
-        
-        // Check for collisions with improved hit box detection
-        function checkCollision() {
-            // Get actual rendered position and dimensions
-            const dinoRect = dino.getBoundingClientRect();
-            const obstacleRect = obstacle.getBoundingClientRect();
-            
-            // Make hit box slightly smaller than visual element for better gameplay
-            const hitBoxReduction = 8;
-            
-            // Create adjusted hitbox for dino
-            const dinoHitBox = {
-                left: dinoRect.left + hitBoxReduction,
-                right: dinoRect.right - hitBoxReduction,
-                top: dinoRect.top + hitBoxReduction,
-                bottom: dinoRect.bottom - hitBoxReduction
-            };
-            
-            // Check collision with obstacle with adjusted hitbox
-            if (
-                dinoHitBox.right > obstacleRect.left + hitBoxReduction &&
-                dinoHitBox.left < obstacleRect.right - hitBoxReduction &&
-                dinoHitBox.bottom > obstacleRect.top + hitBoxReduction
-            ) {
-                gameOver();
+                
+                // Update obstacles
+                this.updateObstacles();
+                
+                // Update score and speed
+                this.score += 1;
+                if (this.score % 500 === 0) {
+                    this.speed += 0.1;
+                    this.gameSpeed += 0.5;
+                }
+                this.updateScore();
+                this.updateSpeed();
+                
+                // Check collisions
+                this.checkCollisions();
+                
+                this.animationId = requestAnimationFrame(() => this.gameLoop());
             }
-        }
-        
-        // Handle touch for mobile devices
-        gameContainer.addEventListener('touchstart', function() {
-            if (!isGameRunning) {
-                startGame();
-            } else if (!isJumping) {
-                jump();
+            
+            spawnObstacle() {
+                const obstacle = document.createElement('div');
+                obstacle.className = 'dino-obstacle';
+                
+                // Random obstacle type
+                const types = ['cactus', 'bird'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                obstacle.classList.add(type);                
+                if (type === 'bird') {
+                    obstacle.style.bottom = '60px'; // Adjusted to align with robot's head while standing
+                }
+                
+                obstacle.style.left = '100%';
+                obstacle.style.animationDuration = (4 / this.gameSpeed) + 's';
+                
+                this.obstacles.appendChild(obstacle);
+                this.activeObstacles.push(obstacle);
             }
-        });
-        
-        // Handle messages from the extension
-        window.addEventListener('message', event => {
-            const message = event.data;
-            if (message.type === 'stopGame') {
-                if (isGameRunning) {
-                    // Stop game animation
-                    isGameRunning = false;
-                    clearInterval(obstacleInterval);
-                    clearInterval(scoreInterval);
-                    dino.classList.remove('running');
+            
+            updateObstacles() {
+                this.activeObstacles = this.activeObstacles.filter(obstacle => {
+                    const rect = obstacle.getBoundingClientRect();
+                    if (rect.right < 0) {
+                        obstacle.remove();
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            
+            jump() {
+                if (this.isJumping || this.isDucking) return;
+                
+                this.isJumping = true;
+                this.player.classList.remove('running');
+                this.player.classList.add('jumping');
+                  setTimeout(() => {
+                    if (this.isRunning) {
+                        this.player.classList.remove('jumping');
+                        this.player.classList.add('running');
+                    }
+                    this.isJumping = false;
+                }, 400);
+            }
+            
+            duck() {
+                if (this.isJumping || this.isDucking) return;
+                
+                this.isDucking = true;
+                this.player.classList.remove('running');
+                this.player.classList.add('ducking');
+            }
+            
+            stopDucking() {
+                if (!this.isDucking) return;
+                
+                this.isDucking = false;
+                this.player.classList.remove('ducking');
+                if (this.isRunning) {
+                    this.player.classList.add('running');
+                }
+            }
+              checkCollisions() {
+                const playerRect = this.player.getBoundingClientRect();
+                
+                for (const obstacle of this.activeObstacles) {
+                    const obstacleRect = obstacle.getBoundingClientRect();
                     
-                    // Show final score
-                    finalScoreValue.textContent = 'Score: ' + score;
-                    gameContainer.style.display = 'none';
-                    finalScoreDisplay.style.display = 'block';
-                    
-                    // Update top score
-                    if (score > topScore) {
-                        topScore = score;
-                        localStorage.setItem('dinoTopScore', topScore);
+                    // Simple collision detection with smaller hitboxes for better gameplay
+                    const margin = 8;
+                    if (
+                        playerRect.left + margin < obstacleRect.right - margin &&
+                        playerRect.right - margin > obstacleRect.left + margin &&
+                        playerRect.top + margin < obstacleRect.bottom - margin &&
+                        playerRect.bottom - margin > obstacleRect.top + margin
+                    ) {
+                        // Immediate freeze - stop all animations and movement
+                        this.freezeGame();
+                        this.gameOver();
+                        return;
                     }
                 }
             }
-        });
-        
-        // Ensure proper initial positioning
-        window.addEventListener('load', function() {
-            // Set initial position of dinosaur
-            dino.style.bottom = GROUND_HEIGHT + 'px';
             
-            // Set initial position of obstacle (off-screen)
-            obstacle.style.right = OBSTACLE_START_POSITION + 'px';
-                        
-            // Force layout calculation to prevent gap
-            document.querySelector('.game-world').offsetHeight;
-        });
+            freezeGame() {
+                // Stop the game loop immediately
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                
+                // Stop all obstacle animations by pausing them
+                this.activeObstacles.forEach(obstacle => {
+                    obstacle.style.animationPlayState = 'paused';
+                });
+                
+                // Stop player animations
+                this.player.classList.remove('running');
+                
+                // Add collision effect
+                this.player.style.filter = 'brightness(0.5) contrast(1.5)';
+                this.gameWorld.style.filter = 'grayscale(0.3)';
+            }
+              gameOver() {
+                this.isRunning = false;
+                
+                this.player.classList.remove('running', 'jumping', 'ducking');
+                
+                // Update best score
+                const currentBest = parseInt(localStorage.getItem('dino-best-score') || '0');
+                if (this.score > currentBest) {
+                    localStorage.setItem('dino-best-score', this.score.toString());
+                    this.loadBestScore();
+                }
+                
+                // Show game over after a brief pause to show the collision
+                setTimeout(() => {
+                    // Reset visual effects
+                    this.player.style.filter = '';
+                    this.gameWorld.style.filter = '';
+                    
+                    // Show game over overlay
+                    this.status.textContent = \`Game Over! Score: \${Math.floor(this.score / 10)}\`;
+                    this.startBtn.textContent = 'Play Again';
+                    this.showOverlay();
+                    
+                    // Clear obstacles
+                    this.obstacles.innerHTML = '';
+                    this.activeObstacles = [];
+                }, 800);
+            }
+            
+            updateScore() {
+                this.scoreEl.textContent = Math.floor(this.score / 10);
+            }
+            
+            updateSpeed() {
+                this.speedEl.textContent = this.speed.toFixed(1) + 'x';
+            }
+            
+            loadBestScore() {
+                const best = parseInt(localStorage.getItem('dino-best-score') || '0');
+                this.bestEl.textContent = best;
+            }
+            
+            showOverlay() {
+                this.overlay.classList.remove('hidden');
+            }
+            
+            hideOverlay() {
+                this.overlay.classList.add('hidden');
+            }
+        }
+        
+        // Initialize the game
+        let dinoGame;
+        
+        function initDinoGame() {
+            dinoGame = new DinoGameLogic();
+        }
+        
+        // Start when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDinoGame);
+        } else {
+            initDinoGame();
+        }
         `;
     }
 }
