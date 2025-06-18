@@ -50,12 +50,15 @@ export function activate(context: vscode.ExtensionContext) {
     
     // Register games
     registerGames();
-    
-    // Create output channel
+      // Create output channel
     outputChannel = vscode.window.createOutputChannel('Playgent');
+    
+    // Show the output channel by default for debugging
+    outputChannel.show();
     
     // Log initial message
     outputChannel.appendLine(`[${new Date().toISOString()}] Playgent Extension activated`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] Extension will show monitoring status automatically`);
     
     // Create status bar item with icon
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -83,10 +86,16 @@ export function activate(context: vscode.ExtensionContext) {
     );
       // Get configuration
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
-    
-    // Start monitoring automatically if enabled
+      // Start monitoring automatically if enabled
     if (config.get<boolean>('autoStartMonitoring', true)) {
         findAndMonitorCopilotLogs();
+        
+        // Show monitoring status after a brief delay to let monitoring start
+        setTimeout(() => {
+            showMonitoringStatus();
+        }, 2000);
+    } else {
+        outputChannel.appendLine(`[${new Date().toISOString()}] Auto-monitoring is disabled in settings`);
     }
     
     // Don't set a default game - we'll pick random games each time
@@ -189,7 +198,14 @@ async function selectGame(extensionUri: vscode.Uri): Promise<void> {
 
 // Create or show the webview panel with the current game
 function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
-    // Always pick a random game for a fresh experience
+    if (webviewPanel) {
+        // If panel already exists, just reveal it - don't change the game
+        outputChannel.appendLine(`[${new Date().toISOString()}] 👁️ Revealing existing webview panel (keeping current game: ${currentGame?.name || 'unknown'})`);
+        webviewPanel.reveal(vscode.ViewColumn.One);
+        return;
+    }
+
+    // Only pick a random game when creating a new panel
     currentGame = GameRegistry.getRandomGame();
     if (!currentGame) {
         currentGame = GameRegistry.getDefaultGame();
@@ -201,60 +217,54 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
 
     outputChannel.appendLine(`[${new Date().toISOString()}] 🎲 Selected random game: ${currentGame.name}`);
 
-    if (webviewPanel) {
-        // If panel already exists, reveal it
-        outputChannel.appendLine(`[${new Date().toISOString()}] 👁️ Revealing existing webview panel`);
-        webviewPanel.reveal(vscode.ViewColumn.One);
-    } else {
-        // Create a new panel
-        outputChannel.appendLine(`[${new Date().toISOString()}] 🆕 Creating new webview panel for ${currentGame.name}`);
-        webviewPanel = vscode.window.createWebviewPanel(
-            'playgentGame',
-            `Playgent: ${currentGame.name}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [extensionUri]
-            }
-        );
+    // Create a new panel
+    outputChannel.appendLine(`[${new Date().toISOString()}] 🆕 Creating new webview panel for ${currentGame.name}`);
+    webviewPanel = vscode.window.createWebviewPanel(
+        'playgentGame',
+        `Playgent: ${currentGame.name}`,
+        vscode.ViewColumn.One,
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            localResourceRoots: [extensionUri]
+        }
+    );
 
-        webviewPanel.iconPath = {
-            light: vscode.Uri.joinPath(extensionUri, 'resources', 'light', 'gamepad.svg'),
-            dark: vscode.Uri.joinPath(extensionUri, 'resources', 'dark', 'gamepad.svg')
-        };
-        webviewPanel.webview.html = getWebviewContent(extensionUri);
+    webviewPanel.iconPath = {
+        light: vscode.Uri.joinPath(extensionUri, 'resources', 'light', 'gamepad.svg'),
+        dark: vscode.Uri.joinPath(extensionUri, 'resources', 'dark', 'gamepad.svg')
+    };
+    webviewPanel.webview.html = getWebviewContent(extensionUri);
 
-        // Handle webview panel being closed
-        webviewPanel.onDidDispose(() => {
-            outputChannel.appendLine(`[${new Date().toISOString()}] 🗑️ Webview panel disposed`);
-            webviewPanel = undefined;
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = undefined;
-            }
-        }, null, []);
+    // Handle webview panel being closed
+    webviewPanel.onDidDispose(() => {
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🗑️ Webview panel disposed`);
+        webviewPanel = undefined;
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = undefined;
+        }
+    }, null, []);
 
-        // Handle messages from the webview
-        webviewPanel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'resetTimer':
-                    resetTimer();
-                    break;
-                case 'closeWebview':
-                    if (webviewPanel) {
-                        webviewPanel.dispose();
-                        webviewPanel = undefined;
-                    }
-                    break;
-                case 'changeGame':
-                    selectGame(extensionUri);
-                    break;
-            }
-        });
+    // Handle messages from the webview
+    webviewPanel.webview.onDidReceiveMessage(message => {
+        switch (message.command) {
+            case 'resetTimer':
+                resetTimer();
+                break;
+            case 'closeWebview':
+                if (webviewPanel) {
+                    webviewPanel.dispose();
+                    webviewPanel = undefined;
+                }
+                break;
+            case 'changeGame':
+                selectGame(extensionUri);
+                break;
+        }
+    });
 
-        outputChannel.appendLine(`[${new Date().toISOString()}] ✅ Webview panel created successfully`);
-    }
+    outputChannel.appendLine(`[${new Date().toISOString()}] ✅ Webview panel created successfully`);
 
     // Move the active editor to the second column
     vscode.commands.executeCommand('workbench.action.moveEditorToNextGroup');
@@ -510,18 +520,21 @@ function resetTimer(): void {
  * Find and start monitoring ALL Copilot Chat log files
  */
 async function findAndMonitorCopilotLogs(): Promise<void> {
+    outputChannel.appendLine(`[${new Date().toISOString()}] 🔍 Starting search for Copilot Chat log files...`);
+    
     try {
         const logFiles = await findAllCopilotLogFiles();
         
         if (logFiles.length === 0) {
-            outputChannel.appendLine(`[${new Date().toISOString()}] No Copilot Chat log files found`);
+            outputChannel.appendLine(`[${new Date().toISOString()}] ❌ No Copilot Chat log files found`);
+            outputChannel.appendLine(`[${new Date().toISOString()}] Make sure GitHub Copilot is installed and you've used Copilot Chat recently`);
             statusBarItem.text = "$(gamepad) Playgent";
             statusBarItem.tooltip = "Playgent: No Copilot logs found";
             vscode.window.showWarningMessage('Playgent could not find Copilot log files');
             return;
         }
         
-        outputChannel.appendLine(`[${new Date().toISOString()}] Found ${logFiles.length} Copilot Chat log files:`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] ✅ Found ${logFiles.length} Copilot Chat log files:`);
         logFiles.forEach((logFile, index) => {
             outputChannel.appendLine(`[${new Date().toISOString()}] [${index + 1}] ${logFile.path} (Window: ${logFile.windowId})`);
         });
@@ -529,25 +542,28 @@ async function findAndMonitorCopilotLogs(): Promise<void> {
         activeLogFiles = logFiles.map(f => f.path);
         
         // Set up watchers for all log files
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🔧 Setting up file watchers...`);
         for (const logFile of logFiles) {
             await setupLogFileMonitoring(logFile);
         }
-        
-        // Set up polling as backup
+          // Set up polling as backup
         if (!filePollingInterval) {
             filePollingInterval = setInterval(() => {
                 activeLogFiles.forEach(filePath => {
                     readLogFile(filePath);
                 });
             }, 1000); // Check every second
-            outputChannel.appendLine(`[${new Date().toISOString()}] Started polling backup for ${activeLogFiles.length} files`);
+            outputChannel.appendLine(`[${new Date().toISOString()}] 🔄 Started polling backup for ${activeLogFiles.length} files`);
         }
         
         statusBarItem.text = "$(gamepad) Playgent";
         statusBarItem.tooltip = `Playgent: Monitoring ${logFiles.length} Copilot windows`;
         
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🎮 Playgent is now monitoring Copilot activity!`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] 💡 Use Copilot Chat to trigger tool_calls and see the game window open`);
+        
     } catch (error) {
-        outputChannel.appendLine(`[${new Date().toISOString()}] Error finding logs: ${error}`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] ❌ Error finding logs: ${error}`);
         statusBarItem.text = "$(gamepad) Playgent (!!)";
         statusBarItem.tooltip = "Playgent: Error finding logs";
         vscode.window.showErrorMessage('Playgent encountered an error while finding Copilot logs');
