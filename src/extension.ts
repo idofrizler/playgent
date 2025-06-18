@@ -81,8 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
             showMonitoringStatus();
         })
     );
-    
-    // Get configuration
+      // Get configuration
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
     
     // Start monitoring automatically if enabled
@@ -90,37 +89,20 @@ export function activate(context: vscode.ExtensionContext) {
         findAndMonitorCopilotLogs();
     }
     
-    // Set default game if configured
-    const defaultGameId = config.get<string>('defaultGame', 'dino-game');
-    if (defaultGameId) {
-        const game = GameRegistry.getGame(defaultGameId);
-        if (game) {
-            currentGame = game;
-        }
-    }
+    // Don't set a default game - we'll pick random games each time
     
     // Listen for configuration changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration(`${CONFIG_SECTION}.autoStartMonitoring`)) {
                 const newConfig = vscode.workspace.getConfiguration(CONFIG_SECTION);
-                if (newConfig.get<boolean>('autoStartMonitoring', true)) {
-                    findAndMonitorCopilotLogs();
+                if (newConfig.get<boolean>('autoStartMonitoring', true)) {                    findAndMonitorCopilotLogs();
                 } else {
                     stopMonitoring();
                 }
             }
             
-            if (e.affectsConfiguration(`${CONFIG_SECTION}.defaultGame`)) {
-                const newConfig = vscode.workspace.getConfiguration(CONFIG_SECTION);
-                const defaultGameId = newConfig.get<string>('defaultGame', 'dino-game');
-                if (defaultGameId) {
-                    const game = GameRegistry.getGame(defaultGameId);
-                    if (game && (!currentGame || webviewPanel === undefined)) {
-                        currentGame = game;
-                    }
-                }
-            }
+            // Remove default game configuration - we now use random games
         })
     );
     
@@ -207,6 +189,8 @@ async function selectGame(extensionUri: vscode.Uri): Promise<void> {
 
 // Create or show the webview panel with the current game
 function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
+    // Always pick a random game for a fresh experience
+    currentGame = GameRegistry.getRandomGame();
     if (!currentGame) {
         currentGame = GameRegistry.getDefaultGame();
         if (!currentGame) {
@@ -215,11 +199,15 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
         }
     }
 
+    outputChannel.appendLine(`[${new Date().toISOString()}] 🎲 Selected random game: ${currentGame.name}`);
+
     if (webviewPanel) {
         // If panel already exists, reveal it
+        outputChannel.appendLine(`[${new Date().toISOString()}] 👁️ Revealing existing webview panel`);
         webviewPanel.reveal(vscode.ViewColumn.One);
     } else {
         // Create a new panel
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🆕 Creating new webview panel for ${currentGame.name}`);
         webviewPanel = vscode.window.createWebviewPanel(
             'playgentGame',
             `Playgent: ${currentGame.name}`,
@@ -239,6 +227,7 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
 
         // Handle webview panel being closed
         webviewPanel.onDidDispose(() => {
+            outputChannel.appendLine(`[${new Date().toISOString()}] 🗑️ Webview panel disposed`);
             webviewPanel = undefined;
             if (timerInterval) {
                 clearInterval(timerInterval);
@@ -263,6 +252,8 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
                     break;
             }
         });
+
+        outputChannel.appendLine(`[${new Date().toISOString()}] ✅ Webview panel created successfully`);
     }
 
     // Move the active editor to the second column
@@ -423,27 +414,23 @@ function startTimer(): void {
             outputChannel.appendLine(`[${new Date().toISOString()}] 📱 Timer running but window was closed, reopening game window`);
             createOrShowWebviewPanel(extensionUri);
         } else {
-            outputChannel.appendLine(`[${new Date().toISOString()}] ⚠️ Timer already started, game window already open`);
+            outputChannel.appendLine(`[${new Date().toISOString()}] ⚠️ Timer already started, game window already open - revealing it`);
+            webviewPanel.reveal(vscode.ViewColumn.One);
         }
         return;
     }
 
     timerStarted = true;
     timerStartTime = Date.now();
-    outputChannel.appendLine(`[${new Date().toISOString()}] 🎮 Tool call detected, starting timer and opening game window`);
+    outputChannel.appendLine(`[${new Date().toISOString()}] 🎮 Tool call detected - Starting timer and opening game window`);
     
     // Update status bar
     statusBarItem.text = "$(gamepad) Playgent $(loading~spin)";
     statusBarItem.tooltip = "Playgent: Copilot activity in progress - Game window opening";
     
-    // Open the game window if it doesn't exist
-    if (!webviewPanel) {
-        outputChannel.appendLine(`[${new Date().toISOString()}] 📱 Opening Playgent game window`);
-        createOrShowWebviewPanel(extensionUri);
-    } else {
-        outputChannel.appendLine(`[${new Date().toISOString()}] 📱 Game window already open, revealing it`);
-        webviewPanel.reveal(vscode.ViewColumn.One);
-    }
+    // Always create/open the game window on first tool_calls
+    outputChannel.appendLine(`[${new Date().toISOString()}] � Opening Playgent game window (webviewPanel exists: ${!!webviewPanel})`);
+    createOrShowWebviewPanel(extensionUri);
     
     // Start timer interval for status bar animation
     timerInterval = setInterval(() => {

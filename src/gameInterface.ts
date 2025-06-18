@@ -47,12 +47,23 @@ export class GameRegistry {
     static getAllGames(): CopilotGame[] {
         return Array.from(this.games.values());
     }
-    
-    /**
-     * Get the default game
+      /**
+     * Get the default game (first registered game)
      */
     static getDefaultGame(): CopilotGame | undefined {
         const games = this.getAllGames();
         return games.length > 0 ? games[0] : undefined;
+    }
+
+    /**
+     * Get a random game
+     */
+    static getRandomGame(): CopilotGame | undefined {
+        const games = this.getAllGames();
+        if (games.length === 0) {
+            return undefined;
+        }
+        const randomIndex = Math.floor(Math.random() * games.length);
+        return games[randomIndex];
     }
 }

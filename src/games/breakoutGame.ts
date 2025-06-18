@@ -1078,15 +1078,23 @@ export class BreakoutGame implements CopilotGame {
                     }, 1000);
                 }
             }
-            
-            // Game state methods
+              // Game state methods
             gameOver() {
                 this.gameState = 'gameover';
+                
+                // Store the final score before resetting
+                const finalScore = this.score;
                 
                 if (this.score > this.bestScore) {
                     this.bestScore = this.score;
                     localStorage.setItem('breakout-best-score', this.bestScore.toString());
                 }
+                
+                // Ensure lives is set to 0 for proper display
+                this.lives = 0;
+                
+                // Reset score to 0 after game over
+                this.score = 0;
                 
                 if (this.animationId) {
                     cancelAnimationFrame(this.animationId);
@@ -1095,7 +1103,7 @@ export class BreakoutGame implements CopilotGame {
                 
                 this.updateDisplay();
                 this.updateButtonVisibility();
-                this.showOverlay('Game Over!', \`Final Score: \${this.score}\`);
+                this.showOverlay('Game Over!', \`Final Score: \${finalScore}\`);
             }
             
             levelComplete() {
