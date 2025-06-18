@@ -608,14 +608,33 @@ async function setupLogFileMonitoring(logFile: LogFileInfo): Promise<void> {
  */
 async function findAllCopilotLogFiles(): Promise<LogFileInfo[]> {
     try {
-        // Get the VS Code logs directory
-        const appDataDir = process.env.APPDATA || (process.platform === 'darwin' ? 
-            path.join(os.homedir(), 'Library', 'Application Support') : 
-            path.join(os.homedir(), '.config'));
+        // Get the VS Code logs directory based on platform
+        let appDataDir: string;
+        if (process.platform === 'darwin') {
+            // macOS
+            appDataDir = path.join(os.homedir(), 'Library', 'Application Support');
+        } else if (process.platform === 'win32') {
+            // Windows
+            appDataDir = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+        } else {
+            // Linux and others
+            appDataDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+        }
             
         // Determine if this is VS Code or VS Code Insiders
         const isInsiders = vscode.env.appName.includes('Insiders');
         const baseLogDir = path.join(appDataDir, isInsiders ? 'Code - Insiders' : 'Code', 'logs');
+        
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🔍 Platform: ${process.platform}`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🔍 App Data Dir: ${appDataDir}`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🔍 Base Log Dir: ${baseLogDir}`);
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🔍 VS Code Version: ${isInsiders ? 'Insiders' : 'Stable'}`);
+        
+        // Check if base log directory exists
+        if (!await pathExists(baseLogDir)) {
+            outputChannel.appendLine(`[${new Date().toISOString()}] ❌ Base log directory does not exist: ${baseLogDir}`);
+            return [];
+        }
         
         // Find all date-based directories in the logs folder
         const dateDirs = await fs.promises.readdir(baseLogDir);
@@ -641,15 +660,18 @@ async function findAllCopilotLogFiles(): Promise<LogFileInfo[]> {
                 const windowDirsFiltered = windowDirs.filter(dir => dir.startsWith('window'));
                 
                 outputChannel.appendLine(`[${new Date().toISOString()}] Checking date ${dateDir}: found ${windowDirsFiltered.length} windows`);
-                
-                // Check each window directory
+                  // Check each window directory
                 for (const windowDir of windowDirsFiltered) {
                     const windowPath = path.join(dateDirPath, windowDir);
                     const extHostPath = path.join(windowPath, 'exthost', 'GitHub.copilot-chat');
                     
+                    outputChannel.appendLine(`[${new Date().toISOString()}] 🔍 Checking: ${extHostPath}`);
+                    
                     try {
                         if (await pathExists(extHostPath)) {
                             const files = await fs.promises.readdir(extHostPath);
+                            outputChannel.appendLine(`[${new Date().toISOString()}] 📁 Found files in ${windowDir}: ${files.join(', ')}`);
+                            
                             const logFile = files.find(file => file.endsWith('.log'));
                             
                             if (logFile) {
@@ -659,6 +681,8 @@ async function findAllCopilotLogFiles(): Promise<LogFileInfo[]> {
                                 // Only include files that have been modified recently (within last 24 hours)
                                 const hoursSinceModified = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60);
                                 
+                                outputChannel.appendLine(`[${new Date().toISOString()}] 📊 Log file ${logFile}: ${stats.size} bytes, ${hoursSinceModified.toFixed(1)}h ago`);
+                                
                                 if (hoursSinceModified < 24) {
                                     allLogFiles.push({
                                         path: logFilePath,
@@ -667,11 +691,18 @@ async function findAllCopilotLogFiles(): Promise<LogFileInfo[]> {
                                         isActive: hoursSinceModified < 1 // Active if modified within last hour
                                     });
                                     
-                                    outputChannel.appendLine(`[${new Date().toISOString()}] Found active log: ${windowDir} (${hoursSinceModified.toFixed(1)}h ago, ${stats.size} bytes)`);
+                                    outputChannel.appendLine(`[${new Date().toISOString()}] ✅ Added active log: ${windowDir} (${hoursSinceModified.toFixed(1)}h ago, ${stats.size} bytes)`);
+                                } else {
+                                    outputChannel.appendLine(`[${new Date().toISOString()}] ⏰ Skipping old log: ${windowDir} (${hoursSinceModified.toFixed(1)}h ago)`);
                                 }
+                            } else {
+                                outputChannel.appendLine(`[${new Date().toISOString()}] ❌ No .log file found in ${windowDir}`);
                             }
+                        } else {
+                            outputChannel.appendLine(`[${new Date().toISOString()}] ❌ Path does not exist: ${extHostPath}`);
                         }
                     } catch (error) {
+                        outputChannel.appendLine(`[${new Date().toISOString()}] ❌ Error checking ${windowDir}: ${error}`);
                         // Skip this window if there's an error
                         continue;
                     }
