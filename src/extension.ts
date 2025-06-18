@@ -8,6 +8,7 @@ import { MemoryGame } from './games/memoryGame';
 import { XkcdGame } from './games/xkcdGame';
 import { SimonGame } from './games/simonGame';
 import { BreakoutGame } from './games/breakoutGame';
+import { NeonSnakeGame } from './games/neonSnakeGame';
 
 // Extension state
 let outputChannel: vscode.OutputChannel;
@@ -41,6 +42,7 @@ function registerGames() {
     GameRegistry.registerGame(new XkcdGame());
     GameRegistry.registerGame(new SimonGame());
     GameRegistry.registerGame(new BreakoutGame());
+    GameRegistry.registerGame(new NeonSnakeGame());
     // Add new games here
 }
 
@@ -654,8 +656,7 @@ async function findAllCopilotLogFiles(): Promise<LogFileInfo[]> {
         // For each date directory (check recent ones), look for ALL window*/exthost/GitHub.copilot-chat directories
         for (const dateDir of sortedDirs.slice(0, 2)) { // Check only the 2 most recent days
             const dateDirPath = path.join(baseLogDir, dateDir);
-            
-            try {                // Get window directories
+              try {                // Get window directories
                 const windowDirs = await fs.promises.readdir(dateDirPath);
                 const windowDirsFiltered = windowDirs.filter(dir => dir.startsWith('window'));
                 
