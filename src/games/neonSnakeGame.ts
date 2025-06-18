@@ -298,10 +298,14 @@ export class NeonSnakeGame implements CopilotGame {
     }
     
     getJavaScriptContent(): string {
-        return `
-            class NeonSnakeGame {
+        return `            class NeonSnakeGame {
                 constructor() {
                     this.canvas = document.getElementById('snake-canvas');
+                    if (!this.canvas) {
+                        console.error('Snake canvas not found');
+                        return;
+                    }
+                    
                     this.ctx = this.canvas.getContext('2d');
                     this.gridSize = 20;
                     this.gridWidth = this.canvas.width / this.gridSize;
@@ -324,9 +328,14 @@ export class NeonSnakeGame implements CopilotGame {
                     this.setupEventListeners();
                     this.setupUI();
                 }
-                
-                setupEventListeners() {
-                    document.getElementById('snake-start').addEventListener('click', () => this.startGame());
+                  setupEventListeners() {
+                    // Add error handling for DOM elements
+                    const startButton = document.getElementById('snake-start');
+                    if (startButton) {
+                        startButton.addEventListener('click', () => this.startGame());
+                    } else {
+                        console.error('Snake start button not found');
+                    }
                     
                     document.addEventListener('keydown', (e) => {
                         if (!this.gameRunning) return;
@@ -358,8 +367,7 @@ export class NeonSnakeGame implements CopilotGame {
                     this.updateLength();
                     this.updateBestScore();
                 }
-                
-                startGame() {
+                  startGame() {
                     this.snake = [{x: 10, y: 10}];
                     this.direction = {x: 1, y: 0};
                     this.nextDirection = {x: 1, y: 0};
@@ -375,7 +383,10 @@ export class NeonSnakeGame implements CopilotGame {
                     this.updateLength();
                     this.updatePowerUps();
                     
-                    document.getElementById('snake-overlay').classList.add('hidden');
+                    const overlay = document.getElementById('snake-overlay');
+                    if (overlay) {
+                        overlay.classList.add('hidden');
+                    }
                     this.gameRunning = true;
                     
                     this.gameLoop();
@@ -644,23 +655,38 @@ export class NeonSnakeGame implements CopilotGame {
                     
                     setTimeout(() => particle.remove(), 2000);
                 }
-                
-                updateScore() {
-                    document.getElementById('snake-score').textContent = this.score;
+                  updateScore() {
+                    const scoreElement = document.getElementById('snake-score');
+                    if (scoreElement) {
+                        scoreElement.textContent = this.score;
+                    }
                 }
                 
                 updateLength() {
-                    document.getElementById('snake-length').textContent = this.length;
+                    const lengthElement = document.getElementById('snake-length');
+                    if (lengthElement) {
+                        lengthElement.textContent = this.length;
+                    }
                 }
                 
                 updateBestScore() {
                     const best = localStorage.getItem('neon-snake-best') || 0;
-                    document.getElementById('snake-best').textContent = best;
+                    const bestElement = document.getElementById('snake-best');
+                    if (bestElement) {
+                        bestElement.textContent = best;
+                    }
                 }
                 
                 updatePowerUps() {
-                    document.getElementById('speed-boost').classList.toggle('active', this.speedBoost);
-                    document.getElementById('score-multiplier').classList.toggle('active', this.scoreMultiplier);
+                    const speedElement = document.getElementById('speed-boost');
+                    const multiplierElement = document.getElementById('score-multiplier');
+                    
+                    if (speedElement) {
+                        speedElement.classList.toggle('active', this.speedBoost);
+                    }
+                    if (multiplierElement) {
+                        multiplierElement.classList.toggle('active', this.scoreMultiplier);
+                    }
                 }
                 
                 loadBestScore() {
@@ -674,21 +700,42 @@ export class NeonSnakeGame implements CopilotGame {
                         this.updateBestScore();
                     }
                 }
-                
-                gameOver() {
+                  gameOver() {
                     this.gameRunning = false;
                     this.saveBestScore();
                     
-                    document.getElementById('snake-message').textContent = 'Game Over!';
-                    document.getElementById('snake-start').textContent = 'Play Again';
-                    document.getElementById('snake-overlay').classList.remove('hidden');
+                    const messageElement = document.getElementById('snake-message');
+                    const startButton = document.getElementById('snake-start');
+                    const overlay = document.getElementById('snake-overlay');
+                    
+                    if (messageElement) {
+                        messageElement.textContent = 'Game Over!';
+                    }
+                    if (startButton) {
+                        startButton.textContent = 'Play Again';
+                    }
+                    if (overlay) {
+                        overlay.classList.remove('hidden');
+                    }
+                }}
+            
+            // Game initialization
+            let neonSnakeGame;
+            
+            function initNeonSnakeGame() {
+                if (neonSnakeGame) {
+                    // Reset if already exists
+                    neonSnakeGame.gameRunning = false;
                 }
+                neonSnakeGame = new NeonSnakeGame();
             }
             
-            // Initialize game when page loads
-            document.addEventListener('DOMContentLoaded', () => {
-                new NeonSnakeGame();
-            });
+            // Auto-initialize
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initNeonSnakeGame);
+            } else {
+                initNeonSnakeGame();
+            }
         `;
     }
 }
