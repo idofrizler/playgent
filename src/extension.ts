@@ -205,21 +205,20 @@ function createOrShowWebviewPanel(extensionUri: vscode.Uri): void {
         outputChannel.appendLine(`[${new Date().toISOString()}] 👁️ Revealing existing webview panel (keeping current game: ${currentGame?.name || 'unknown'})`);
         webviewPanel.reveal(vscode.ViewColumn.One);
         return;
-    }
-
-    // Only pick a random game when creating a new panel
-    currentGame = GameRegistry.getRandomGame();
+    }    // Only pick a random game when creating a new panel and no game is already selected
     if (!currentGame) {
-        currentGame = GameRegistry.getDefaultGame();
+        currentGame = GameRegistry.getRandomGame();
         if (!currentGame) {
-            vscode.window.showErrorMessage('No games available');
-            return;
+            currentGame = GameRegistry.getDefaultGame();
+            if (!currentGame) {
+                vscode.window.showErrorMessage('No games available');
+                return;
+            }
         }
-    }
-
-    outputChannel.appendLine(`[${new Date().toISOString()}] 🎲 Selected random game: ${currentGame.name}`);
-
-    // Create a new panel
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🎲 Selected random game: ${currentGame.name}`);
+    } else {
+        outputChannel.appendLine(`[${new Date().toISOString()}] 🎯 Using pre-selected game: ${currentGame.name}`);
+    }    // Create a new panel
     outputChannel.appendLine(`[${new Date().toISOString()}] 🆕 Creating new webview panel for ${currentGame.name}`);
     webviewPanel = vscode.window.createWebviewPanel(
         'playgentGame',
