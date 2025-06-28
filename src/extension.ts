@@ -9,6 +9,7 @@ import { XkcdGame } from './games/xkcdGame';
 import { SimonGame } from './games/simonGame';
 import { BreakoutGame } from './games/breakoutGame';
 import { NeonSnakeGame } from './games/neonSnakeGame';
+import { WhackAMoleGame } from './games/whackAMoleGame';
 
 // Extension state
 let outputChannel: vscode.OutputChannel;
@@ -43,6 +44,7 @@ function registerGames() {
     GameRegistry.registerGame(new SimonGame());
     GameRegistry.registerGame(new BreakoutGame());
     GameRegistry.registerGame(new NeonSnakeGame());
+    GameRegistry.registerGame(new WhackAMoleGame());
     // Add new games here
 }
 
