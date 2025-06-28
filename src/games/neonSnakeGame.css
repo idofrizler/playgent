@@ -1,233 +1,292 @@
 .snake-container {
-                background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-                min-height: 100vh;
-                padding: 20px;
-                font-family: 'Courier New', monospace;
-                color: #00ffff;
-                position: relative;
-                overflow: hidden;
-            }
+    width: 100%;
+    max-width: 700px; /* Consistent with breakout */
+    margin: 0 auto;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.9), rgba(50, 50, 50, 0.9)); /* Consistent with breakout */
+    border-radius: 20px; /* Consistent with breakout */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); /* Consistent with breakout */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; /* Consistent with breakout */
+    color: var(--vscode-foreground); /* Consistent with breakout */
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px); /* Consistent with breakout */
+}
 
-            .snake-container::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background:
-                    radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
-                pointer-events: none;
-                z-index: 1;
-            }
+.snake-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(0, 255, 255, 0.03) 0%, transparent 50%); /* Consistent with breakout */
+    animation: snake-pulse 4s ease-in-out infinite; /* Renamed animation */
+    pointer-events: none;
+}
 
-            .snake-header {
-                text-align: center;
-                margin-bottom: 30px;
-                position: relative;
-                z-index: 2;
-            }
+@keyframes snake-pulse { /* Renamed animation */
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.3; }
+    50% { transform: scale(1.1) rotate(180deg); opacity: 0.1; }
+}
 
-            .snake-title {
-                font-size: 2.5rem;
-                font-weight: bold;
-                background: linear-gradient(45deg, #00ffff, #ff00ff, #00ff00);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-                margin-bottom: 10px;
-                animation: neonPulse 2s ease-in-out infinite alternate;
-            }
+.snake-header {
+    text-align: center;
+    margin-bottom: 20px; /* Consistent with breakout */
+    position: relative;
+    z-index: 2;
+}
 
-            @keyframes neonPulse {
-                from { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
-                to { text-shadow: 0 0 40px rgba(0, 255, 255, 0.8), 0 0 60px rgba(255, 0, 255, 0.3); }
-            }
+.snake-title {
+    font-size: 2rem; /* Consistent with breakout */
+    font-weight: 700; /* Consistent with breakout */
+    margin-bottom: 5px; /* Consistent with breakout */
+    background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00); /* Consistent with breakout */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); /* Consistent with breakout */
+    animation: snake-glow 2s ease-in-out infinite alternate; /* Renamed animation */
+}
 
-            .snake-subtitle {
-                font-size: 1.1rem;
-                color: #888;
-                text-transform: uppercase;
-                letter-spacing: 2px;
-            }
+@keyframes snake-glow { /* Renamed animation */
+    from { filter: brightness(1) drop-shadow(0 0 5px rgba(0, 255, 255, 0.5)); }
+    to { filter: brightness(1.2) drop-shadow(0 0 15px rgba(0, 255, 255, 0.8)); }
+}
 
-            .snake-stats {
-                display: flex;
-                justify-content: center;
-                gap: 40px;
-                margin-bottom: 30px;
-                position: relative;
-                z-index: 2;
-            }
+.snake-subtitle {
+    font-size: 1rem; /* Consistent with breakout */
+    color: var(--vscode-descriptionForeground); /* Consistent with breakout */
+    margin-bottom: 10px; /* Consistent with breakout */
+    opacity: 0.8; /* Consistent with breakout */
+}
 
-            .snake-stat {
-                background: rgba(0, 255, 255, 0.1);
-                border: 1px solid rgba(0, 255, 255, 0.3);
-                border-radius: 10px;
-                padding: 15px 25px;
-                text-align: center;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-            }
+.snake-stats {
+    display: flex;
+    justify-content: space-around; /* Consistent with breakout */
+    margin-bottom: 20px; /* Consistent with breakout */
+    padding: 20px; /* Consistent with breakout */
+    background: rgba(255, 255, 255, 0.05); /* Consistent with breakout */
+    border-radius: 15px; /* Consistent with breakout */
+    border: 1px solid rgba(0, 255, 255, 0.2); /* Consistent with breakout */
+    position: relative;
+    z-index: 2;
+    backdrop-filter: blur(10px); /* Consistent with breakout */
+}
 
-            .snake-stat-label {
-                font-size: 0.9rem;
-                color: #aaa;
-                margin-bottom: 5px;
-                text-transform: uppercase;
-            }
+.snake-stat {
+    text-align: center;
+    flex: 1; /* Consistent with breakout */
+}
 
-            .snake-stat-value {
-                font-size: 1.8rem;
-                font-weight: bold;
-                color: #00ffff;
-                text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
-            }
+.snake-stat-label {
+    font-size: 0.8rem; /* Consistent with breakout */
+    color: var(--vscode-descriptionForeground); /* Consistent with breakout */
+    margin-bottom: 5px; /* Consistent with breakout */
+    text-transform: uppercase; /* Consistent with breakout */
+    letter-spacing: 0.5px; /* Consistent with breakout */
+    opacity: 0.8; /* Consistent with breakout */
+}
 
-            .snake-game-world {
-                display: flex;
-                justify-content: center;
-                margin-bottom: 30px;
-                position: relative;
-                z-index: 2;
-            }
+.snake-stat-value {
+    font-size: 1.5rem; /* Consistent with breakout */
+    font-weight: 700; /* Consistent with breakout */
+    color: #00ffff; /* Consistent with breakout */
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); /* Consistent with breakout */
+}
 
-            .snake-grid-container {
-                position: relative;
-                border: 2px solid rgba(0, 255, 255, 0.5);
-                border-radius: 15px;
-                background: rgba(0, 0, 0, 0.5);
-                box-shadow:
-                    0 0 30px rgba(0, 255, 255, 0.3),
-                    inset 0 0 30px rgba(0, 255, 255, 0.1);
-                overflow: hidden;
-            }
+.snake-game-world {
+    position: relative; /* Consistent with breakout */
+    margin-bottom: 20px; /* Consistent with breakout */
+    z-index: 2; /* Consistent with breakout */
+    display: flex; /* Added for centering canvas */
+    justify-content: center; /* Added for centering canvas */
+}
 
-            #snake-canvas {
-                display: block;
-                background: transparent;
-            }
+.snake-grid-container { /* This will wrap the canvas */
+    position: relative;
+    background: rgba(0, 0, 0, 0.3); /* Consistent with breakout canvas container */
+    border-radius: 15px; /* Consistent with breakout canvas container */
+    border: 2px solid rgba(0, 255, 255, 0.3); /* Consistent with breakout canvas container */
+    overflow: hidden;
+    box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.1); /* Consistent with breakout canvas container */
+    display: inline-block; /* To make it fit the canvas size */
+}
 
-            .snake-particles {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                z-index: 1;
-            }
+#snake-canvas {
+    display: block;
+    /* width will be set by JS, height will be set by JS */
+    background: linear-gradient(135deg, rgba(0, 10, 20, 0.8), rgba(10, 0, 20, 0.8)); /* Consistent with breakout canvas */
+}
 
-            .snake-overlay {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10;
-                backdrop-filter: blur(5px);
-            }
+.snake-particles { /* Styles from breakout */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
 
-            .snake-overlay.hidden {
-                display: none;
-            }
+.particle { /* Renamed from breakout-particle, styles from breakout */
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, #00ffff, transparent);
+    border-radius: 50%;
+    animation: snake-particle-float 1s ease-out forwards; /* Renamed animation */
+}
 
-            .snake-overlay-content {
-                text-align: center;
-                color: #00ffff;
-            }
+@keyframes snake-particle-float { /* Renamed animation */
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0) translate(var(--dx), var(--dy));
+    }
+}
 
-            .snake-message {
-                font-size: 1.5rem;
-                margin-bottom: 15px;
-                text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
-            }
+.snake-overlay { /* Styles from breakout */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px; /* Match parent container if it's rounded */
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
 
-            .snake-controls {
-                font-size: 1rem;
-                color: #aaa;
-                margin-bottom: 25px;
-            }
+.snake-overlay.hidden { /* Styles from breakout */
+    opacity: 0;
+    pointer-events: none;
+}
 
-            .snake-start-btn {
-                background: linear-gradient(45deg, #00ffff, #ff00ff);
-                border: none;
-                color: #000;
-                padding: 15px 30px;
-                font-size: 1.1rem;
-                font-weight: bold;
-                border-radius: 25px;
-                cursor: pointer;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                transition: all 0.3s ease;
-                box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-            }
+.snake-overlay-content { /* Styles from breakout */
+    text-align: center;
+    padding: 40px;
+    background: rgba(20, 20, 40, 0.9);
+    border-radius: 20px;
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
 
-            .snake-start-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 25px rgba(0, 255, 255, 0.7);
-            }
+.snake-message { /* Styles from breakout */
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #00ffff;
+    text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
 
-            .snake-power-indicators {
-                display: flex;
-                justify-content: center;
-                gap: 20px;
-                position: relative;
-                z-index: 2;
-            }
+.snake-controls { /* Formerly snake-sub-message, adapted */
+    font-size: 1.1rem; /* Consistent with breakout */
+    color: rgba(255, 255, 255, 0.8); /* Consistent with breakout */
+    margin-bottom: 20px; /* Added margin */
+}
 
-            .snake-power-item {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                border-radius: 20px;
-                padding: 10px 15px;
-                opacity: 0.5;
-                transition: all 0.3s ease;
-            }
+.snake-start-btn { /* Styles from breakout-btn breakout-start-btn */
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(45deg, #00ff88, #00ffff);
+    color: #000;
+    box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+}
 
-            .snake-power-item.active {
-                opacity: 1;
-                background: rgba(0, 255, 0, 0.1);
-                border-color: rgba(0, 255, 0, 0.5);
-                box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
-            }
+.snake-start-btn:hover { /* Styles from breakout-btn breakout-start-btn:hover */
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 255, 136, 0.4);
+}
 
-            .snake-power-icon {
-                font-size: 1.2rem;
-            }
+.snake-start-btn::before { /* Styles from breakout-btn::before */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
 
-            .snake-power-label {
-                font-size: 0.9rem;
-                color: #ccc;
-            }
+.snake-start-btn:hover::before { /* Styles from breakout-btn:hover::before */
+    left: 100%;
+}
 
-            .particle {
-                position: absolute;
-                width: 4px;
-                height: 4px;
-                background: radial-gradient(circle, #00ffff, transparent);
-                border-radius: 50%;
-                pointer-events: none;
-                animation: particleFloat 2s ease-out forwards;
-            }
 
-            @keyframes particleFloat {
-                0% {
-                    opacity: 1;
-                    transform: translateY(0) scale(1);
-                }
-                100% {
-                    opacity: 0;
-                    transform: translateY(-50px) scale(0);
-                }
-            }
+.snake-power-indicators { /* Styles from breakout-power-ups */
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding: 10px;
+}
+
+.snake-power-item { /* Styles from breakout-power-up-item */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    opacity: 0.4;
+    transition: all 0.3s ease;
+}
+
+.snake-power-item.active { /* Styles from breakout-power-up-item.active */
+    opacity: 1;
+    background: rgba(0, 255, 255, 0.1); /* Using cyan for active power-ups */
+    border-color: rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+}
+
+.snake-power-icon { /* Styles from breakout-power-icon */
+    font-size: 1.2rem;
+}
+
+.snake-power-label { /* Styles from breakout-power-label */
+    font-size: 0.8rem;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.8;
+}
+
+/* Responsive adjustments from breakout, adjusted for snake */
+@media (max-width: 700px) {
+    .snake-container {
+        padding: 15px;
+    }
+
+    .snake-title {
+        font-size: 1.8rem;
+    }
+
+    .snake-stats {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    .snake-stat {
+        min-width: 80px;
+    }
+
+    .snake-power-indicators {
+        flex-wrap: wrap;
+    }
+}
