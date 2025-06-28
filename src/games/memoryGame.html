@@ -1,0 +1,43 @@
+<div class="memory-container">
+            <div class="memory-header">
+                <div class="memory-title">Memory Cards</div>
+                <div class="memory-subtitle">Find matching pairs</div>
+            </div>
+
+            <div class="memory-stats">
+                <div class="memory-stat">
+                    <div class="memory-stat-label">Moves</div>
+                    <div class="memory-stat-value" id="memory-moves">0</div>
+                </div>
+                <div class="memory-stat">
+                    <div class="memory-stat-label">Time</div>
+                    <div class="memory-stat-value" id="memory-time">0:00</div>
+                </div>
+                <div class="memory-stat">
+                    <div class="memory-stat-label">Best</div>
+                    <div class="memory-stat-value" id="memory-best">--</div>
+                </div>
+            </div>
+              <div class="memory-difficulty">
+                <button class="memory-diff-btn active" data-level="easy">Easy</button>
+                <button class="memory-diff-btn" data-level="medium">Medium</button>
+                <button class="memory-diff-btn" data-level="hard">Hard</button>
+            </div>
+
+            <div class="memory-game-area">
+                <div class="memory-grid" id="memory-grid"></div>
+                <div class="memory-overlay" id="memory-overlay">
+                    <div class="memory-overlay-content">
+                        <div class="memory-status" id="memory-status">Ready to play?</div>
+                        <button class="memory-start-btn" id="memory-start">Start Game</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="memory-progress">
+                <div class="memory-progress-bar">
+                    <div class="memory-progress-fill" id="memory-progress"></div>
+                </div>
+                <div class="memory-progress-text" id="memory-progress-text">0 / 0 pairs found</div>
+            </div>
+        </div>

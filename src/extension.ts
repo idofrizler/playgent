@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { CopilotGame, GameRegistry } from './gameInterface';
-import { DinoGame } from './games/dinoGame';
 import { MemoryGame } from './games/memoryGame';
 import { XkcdGame } from './games/xkcdGame';
 import { SimonGame } from './games/simonGame';
@@ -38,7 +37,6 @@ const CONFIG_SECTION = 'playgent';
 
 // Register games
 function registerGames() {
-    GameRegistry.registerGame(new DinoGame());
     GameRegistry.registerGame(new MemoryGame());
     GameRegistry.registerGame(new XkcdGame());
     GameRegistry.registerGame(new SimonGame());

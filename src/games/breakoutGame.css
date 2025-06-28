@@ -1,0 +1,378 @@
+.breakout-container {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.9), rgba(50, 50, 50, 0.9));
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--vscode-foreground);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .breakout-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(0, 255, 255, 0.03) 0%, transparent 50%);
+            animation: breakout-pulse 4s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes breakout-pulse {
+            0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.3; }
+            50% { transform: scale(1.1) rotate(180deg); opacity: 0.1; }
+        }
+
+        .breakout-header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+          .breakout-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            animation: breakout-glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes breakout-glow {
+            from { filter: brightness(1) drop-shadow(0 0 5px rgba(0, 255, 255, 0.5)); }
+            to { filter: brightness(1.2) drop-shadow(0 0 15px rgba(0, 255, 255, 0.8)); }
+        }
+          .breakout-subtitle {
+            font-size: 1rem;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+          .breakout-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            position: relative;
+            z-index: 2;
+            backdrop-filter: blur(10px);
+        }
+
+        .breakout-stat {
+            text-align: center;
+            flex: 1;
+        }
+
+        .breakout-stat-label {
+            font-size: 0.8rem;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .breakout-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .breakout-game-world {
+            position: relative;
+            margin-bottom: 20px;
+            z-index: 2;
+        }
+          .breakout-canvas-container {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.1);
+        }
+          #breakout-canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 600px;
+            background: linear-gradient(135deg, rgba(0, 10, 20, 0.8), rgba(10, 0, 20, 0.8));
+        }
+
+        .breakout-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .breakout-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, #00ffff, transparent);
+            border-radius: 50%;
+            animation: breakout-particle-float 1s ease-out forwards;
+        }
+
+        @keyframes breakout-particle-float {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0) translate(var(--dx), var(--dy));
+            }
+        }
+
+        .breakout-power-ups {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px;
+        }
+
+        .breakout-power-up-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.4;
+            transition: all 0.3s ease;
+        }
+
+        .breakout-power-up-item.active {
+            opacity: 1;
+            background: rgba(0, 255, 255, 0.1);
+            border-color: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+        }
+
+        .breakout-power-icon {
+            font-size: 1.2rem;
+        }
+          .breakout-power-label {
+            font-size: 0.8rem;
+            color: var(--vscode-descriptionForeground);
+            opacity: 0.8;
+        }
+
+        .breakout-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .breakout-instructions {
+            flex: 1;
+        }
+          .breakout-instruction {
+            font-size: 0.9rem;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.8;
+        }
+
+        .breakout-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .breakout-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .breakout-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .breakout-btn:hover::before {
+            left: 100%;
+        }
+
+        .breakout-start-btn {
+            background: linear-gradient(45deg, #00ff88, #00ffff);
+            color: #000;
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .breakout-start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.4);
+        }
+
+        .breakout-pause-btn {
+            background: linear-gradient(45deg, #ffaa00, #ff6600);
+            color: #fff;
+            box-shadow: 0 5px 15px rgba(255, 170, 0, 0.3);
+        }
+
+        .breakout-pause-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 170, 0, 0.4);
+        }
+
+        .breakout-reset-btn {
+            background: linear-gradient(45deg, #ff4444, #ff0066);
+            color: #fff;
+            box-shadow: 0 5px 15px rgba(255, 68, 68, 0.3);
+        }
+
+        .breakout-reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 68, 68, 0.4);
+        }
+
+        .breakout-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .breakout-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .breakout-overlay-content {
+            text-align: center;
+            padding: 40px;
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 20px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .breakout-message {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .breakout-sub-message {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .breakout-lives-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .breakout-lives-label {
+            font-size: 0.9rem;
+            color: var(--vscode-descriptionForeground);
+            font-weight: 600;
+        }
+
+        .breakout-lives-display {
+            display: flex;
+            gap: 5px;
+        }
+
+        .breakout-life {
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .breakout-life.active {
+            color: #ff4444;
+            text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+        }
+
+        .breakout-life:not(.active) {
+            color: rgba(255, 255, 255, 0.2);
+            text-shadow: none;
+        }        @media (max-width: 700px) {
+            .breakout-container {
+                padding: 15px;
+            }
+
+            .breakout-title {
+                font-size: 1.8rem;
+            }
+
+            .breakout-stats {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .breakout-stat {
+                min-width: 80px;
+            }
+
+            .breakout-controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .breakout-actions {
+                justify-content: center;
+            }
+
+            .breakout-power-ups {
+                flex-wrap: wrap;
+            }
+        }

@@ -7,11 +7,41 @@ export class SimonGame implements CopilotGame {
     id = 'simon-game';
     name = 'Simon Says';
     description = 'Repeat the pattern of colors - memory challenge';
+    private htmlContent: string | undefined;
+    private cssContent: string | undefined;
+    private jsContent: string | undefined;
+
+    constructor() {
+        this.loadAssets();
+    }
+
+    private loadAssets() {
+        const fs = require('fs');
+        const path = require('path');
+        try {
+            this.htmlContent = fs.readFileSync(path.join(__dirname, 'simonGame.html'), 'utf-8');
+            this.cssContent = fs.readFileSync(path.join(__dirname, 'simonGame.css'), 'utf-8');
+            this.jsContent = fs.readFileSync(path.join(__dirname, 'simonGame.js'), 'utf-8');
+        } catch (error) {
+            console.error('Error loading game assets:', error);
+            this.htmlContent = '<p>Error loading HTML content</p>';
+            this.cssContent = '';
+            this.jsContent = '';
+        }
+    }
     
     getHtmlContent(): string {
-        return `
-        <div class="simon-container">
-            <div class="simon-header">
+        return this.htmlContent || '<p>Error loading HTML content</p>';
+    }
+
+    getCssContent(): string {
+        return this.cssContent || '';
+    }
+
+    getJavaScriptContent(): string {
+        return this.jsContent || '';
+    }
+}
                 <div class="simon-title">Simon Says</div>
                 <div class="simon-subtitle">Watch, remember, repeat</div>
             </div>

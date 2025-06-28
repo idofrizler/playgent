@@ -7,11 +7,41 @@ export class XkcdGame implements CopilotGame {
     id = 'xkcd-game';
     name = 'XKCD Comics';
     description = 'View random XKCD comics';
+    private htmlContent: string | undefined;
+    private cssContent: string | undefined;
+    private jsContent: string | undefined;
+
+    constructor() {
+        this.loadAssets();
+    }
+
+    private loadAssets() {
+        const fs = require('fs');
+        const path = require('path');
+        try {
+            this.htmlContent = fs.readFileSync(path.join(__dirname, 'xkcdGame.html'), 'utf-8');
+            this.cssContent = fs.readFileSync(path.join(__dirname, 'xkcdGame.css'), 'utf-8');
+            this.jsContent = fs.readFileSync(path.join(__dirname, 'xkcdGame.js'), 'utf-8');
+        } catch (error) {
+            console.error('Error loading game assets:', error);
+            this.htmlContent = '<p>Error loading HTML content</p>';
+            this.cssContent = '';
+            this.jsContent = '';
+        }
+    }
     
     getHtmlContent(): string {
-        return `
-        <div class="xkcd-container">
-            <div class="comic-display">
+        return this.htmlContent || '<p>Error loading HTML content</p>';
+    }
+
+    getCssContent(): string {
+        return this.cssContent || '';
+    }
+
+    getJavaScriptContent(): string {
+        return this.jsContent || '';
+    }
+}
                 <div class="comic-title" id="comicTitle">Loading comic...</div>
                 <div class="comic-image-container">
                     <img id="comicImage" alt="XKCD Comic" class="comic-image">

@@ -1,0 +1,233 @@
+.snake-container {
+                background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+                min-height: 100vh;
+                padding: 20px;
+                font-family: 'Courier New', monospace;
+                color: #00ffff;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .snake-container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background:
+                    radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%);
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .snake-header {
+                text-align: center;
+                margin-bottom: 30px;
+                position: relative;
+                z-index: 2;
+            }
+
+            .snake-title {
+                font-size: 2.5rem;
+                font-weight: bold;
+                background: linear-gradient(45deg, #00ffff, #ff00ff, #00ff00);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+                margin-bottom: 10px;
+                animation: neonPulse 2s ease-in-out infinite alternate;
+            }
+
+            @keyframes neonPulse {
+                from { text-shadow: 0 0 30px rgba(0, 255, 255, 0.5); }
+                to { text-shadow: 0 0 40px rgba(0, 255, 255, 0.8), 0 0 60px rgba(255, 0, 255, 0.3); }
+            }
+
+            .snake-subtitle {
+                font-size: 1.1rem;
+                color: #888;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+            }
+
+            .snake-stats {
+                display: flex;
+                justify-content: center;
+                gap: 40px;
+                margin-bottom: 30px;
+                position: relative;
+                z-index: 2;
+            }
+
+            .snake-stat {
+                background: rgba(0, 255, 255, 0.1);
+                border: 1px solid rgba(0, 255, 255, 0.3);
+                border-radius: 10px;
+                padding: 15px 25px;
+                text-align: center;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            }
+
+            .snake-stat-label {
+                font-size: 0.9rem;
+                color: #aaa;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+            }
+
+            .snake-stat-value {
+                font-size: 1.8rem;
+                font-weight: bold;
+                color: #00ffff;
+                text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            }
+
+            .snake-game-world {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 30px;
+                position: relative;
+                z-index: 2;
+            }
+
+            .snake-grid-container {
+                position: relative;
+                border: 2px solid rgba(0, 255, 255, 0.5);
+                border-radius: 15px;
+                background: rgba(0, 0, 0, 0.5);
+                box-shadow:
+                    0 0 30px rgba(0, 255, 255, 0.3),
+                    inset 0 0 30px rgba(0, 255, 255, 0.1);
+                overflow: hidden;
+            }
+
+            #snake-canvas {
+                display: block;
+                background: transparent;
+            }
+
+            .snake-particles {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .snake-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10;
+                backdrop-filter: blur(5px);
+            }
+
+            .snake-overlay.hidden {
+                display: none;
+            }
+
+            .snake-overlay-content {
+                text-align: center;
+                color: #00ffff;
+            }
+
+            .snake-message {
+                font-size: 1.5rem;
+                margin-bottom: 15px;
+                text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            }
+
+            .snake-controls {
+                font-size: 1rem;
+                color: #aaa;
+                margin-bottom: 25px;
+            }
+
+            .snake-start-btn {
+                background: linear-gradient(45deg, #00ffff, #ff00ff);
+                border: none;
+                color: #000;
+                padding: 15px 30px;
+                font-size: 1.1rem;
+                font-weight: bold;
+                border-radius: 25px;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                transition: all 0.3s ease;
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            }
+
+            .snake-start-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 25px rgba(0, 255, 255, 0.7);
+            }
+
+            .snake-power-indicators {
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+                position: relative;
+                z-index: 2;
+            }
+
+            .snake-power-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 20px;
+                padding: 10px 15px;
+                opacity: 0.5;
+                transition: all 0.3s ease;
+            }
+
+            .snake-power-item.active {
+                opacity: 1;
+                background: rgba(0, 255, 0, 0.1);
+                border-color: rgba(0, 255, 0, 0.5);
+                box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            }
+
+            .snake-power-icon {
+                font-size: 1.2rem;
+            }
+
+            .snake-power-label {
+                font-size: 0.9rem;
+                color: #ccc;
+            }
+
+            .particle {
+                position: absolute;
+                width: 4px;
+                height: 4px;
+                background: radial-gradient(circle, #00ffff, transparent);
+                border-radius: 50%;
+                pointer-events: none;
+                animation: particleFloat 2s ease-out forwards;
+            }
+
+            @keyframes particleFloat {
+                0% {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+                100% {
+                    opacity: 0;
+                    transform: translateY(-50px) scale(0);
+                }
+            }

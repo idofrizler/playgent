@@ -1,0 +1,320 @@
+.memory-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.9), rgba(50, 50, 50, 0.9));
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .memory-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .memory-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--vscode-foreground);
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .memory-subtitle {
+            font-size: 16px;
+            color: var(--vscode-descriptionForeground);
+            opacity: 0.8;
+        }
+
+        .memory-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .memory-stat {
+            text-align: center;
+        }
+
+        .memory-stat-label {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .memory-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--vscode-textLink-foreground);
+        }
+          .memory-difficulty {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 20;
+        }
+          .memory-diff-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--vscode-foreground);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 21;
+            pointer-events: auto;
+        }
+
+        .memory-diff-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .memory-diff-btn.active {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border-color: var(--vscode-button-background);
+        }
+
+        .memory-game-area {
+            position: relative;
+            margin-bottom: 25px;
+        }        .memory-grid {
+            display: grid;
+            gap: 8px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            min-height: 320px;
+            grid-template-columns: repeat(6, 1fr);
+            justify-content: center;
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+        .memory-grid.easy {
+            grid-template-columns: repeat(4, 1fr);
+            max-width: 360px;
+        }
+
+        .memory-grid.medium {
+            grid-template-columns: repeat(6, 1fr);
+            max-width: 540px;
+        }
+
+        .memory-grid.hard {
+            grid-template-columns: repeat(6, 1fr);
+            max-width: 540px;
+        }
+
+        .memory-card {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(145deg, rgba(80, 80, 80, 1), rgba(60, 60, 60, 1));
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transform-style: preserve-3d;
+        }
+          .memory-card:before {
+            content: '?';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(145deg, rgba(100, 100, 100, 1), rgba(70, 70, 70, 1));
+            color: var(--vscode-descriptionForeground);
+            font-size: 24px;
+            font-weight: 600;
+            border-radius: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backface-visibility: hidden;
+        }
+          .memory-card:hover:before {
+            background: linear-gradient(145deg, rgba(120, 120, 120, 1), rgba(90, 90, 90, 1));
+            transform: scale(0.95);
+        }
+
+        .memory-card.flipped:before {
+            transform: rotateY(180deg);
+            opacity: 0;
+        }
+
+        .memory-card.flipped {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(230, 230, 230, 1));
+            color: #333;
+            transform: rotateY(180deg) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .memory-card.matched {
+            background: linear-gradient(145deg, #2ed573, #1e824c);
+            color: white;
+            transform: scale(0.9);
+            cursor: default;
+            box-shadow: 0 0 20px rgba(46, 213, 115, 0.4);
+        }
+
+        .memory-card.matched:before {
+            display: none;
+        }
+
+        .memory-card.shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+          .memory-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            z-index: 15;
+        }
+
+        .memory-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .memory-overlay-content {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .memory-status {
+            font-size: 24px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 20px;
+        }
+          .memory-start-btn {
+            background: linear-gradient(145deg, var(--vscode-button-background), var(--vscode-button-hoverBackground));
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            min-width: 140px;
+            position: relative;
+            z-index: 16;
+        }
+
+        .memory-start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .memory-start-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .memory-progress {
+            text-align: center;
+        }
+
+        .memory-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .memory-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--vscode-textLink-foreground), var(--vscode-button-background));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .memory-progress-text {
+            font-size: 14px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .memory-card.celebrate {
+            animation: celebrate 0.6s ease-in-out;
+        }
+
+        @media (max-width: 600px) {
+            .memory-container {
+                margin: 10px;
+                padding: 15px;
+            }
+
+            .memory-grid.hard {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .memory-card {
+                font-size: 20px;
+            }
+
+            .memory-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .memory-stat {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .memory-stat-label {
+                margin-bottom: 0;
+            }
+        }

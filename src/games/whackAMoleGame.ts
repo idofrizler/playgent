@@ -7,11 +7,41 @@ export class WhackAMoleGame implements CopilotGame {
     id = 'whack-a-mole';
     name = 'Whack-a-Mole';
     description = 'Test your reflexes and whack the moles!';
+    private htmlContent: string | undefined;
+    private cssContent: string | undefined;
+    private jsContent: string | undefined;
+
+    constructor() {
+        this.loadAssets();
+    }
+
+    private loadAssets() {
+        const fs = require('fs');
+        const path = require('path');
+        try {
+            this.htmlContent = fs.readFileSync(path.join(__dirname, 'whackAMoleGame.html'), 'utf-8');
+            this.cssContent = fs.readFileSync(path.join(__dirname, 'whackAMoleGame.css'), 'utf-8');
+            this.jsContent = fs.readFileSync(path.join(__dirname, 'whackAMoleGame.js'), 'utf-8');
+        } catch (error) {
+            console.error('Error loading game assets:', error);
+            this.htmlContent = '<p>Error loading HTML content</p>';
+            this.cssContent = '';
+            this.jsContent = '';
+        }
+    }
 
     getHtmlContent(): string {
-        return `
-        <div class="whack-container">
-            <div class="whack-header">
+        return this.htmlContent || '<p>Error loading HTML content</p>';
+    }
+
+    getCssContent(): string {
+        return this.cssContent || '';
+    }
+
+    getJavaScriptContent(): string {
+        return this.jsContent || '';
+    }
+}
                 <div class="whack-title">Whack-a-Mole</div>
                 <div class="whack-subtitle">Test your reflexes!</div>
             </div>

@@ -1,0 +1,67 @@
+<div class="breakout-container">
+            <div class="breakout-header">
+                <div class="breakout-title">Breakout Blaster</div>
+                <div class="breakout-subtitle">Destroy all bricks to win</div>
+            </div>
+              <div class="breakout-stats">
+                <div class="breakout-stat">
+                    <div class="breakout-stat-label">Score</div>
+                    <div class="breakout-stat-value" id="breakout-score">0</div>
+                </div>
+                <div class="breakout-stat">
+                    <div class="breakout-stat-label">Level</div>
+                    <div class="breakout-stat-value" id="breakout-level">1</div>
+                </div>
+                <div class="breakout-stat">
+                    <div class="breakout-stat-label">Best</div>
+                    <div class="breakout-stat-value" id="breakout-best">0</div>
+                </div>
+            </div><div class="breakout-game-world" id="breakout-game-world">
+                <div class="breakout-canvas-container">
+                    <canvas id="breakout-canvas" width="600" height="400"></canvas>
+                    <div class="breakout-particles" id="breakout-particles"></div>
+                    <div class="breakout-overlay" id="breakout-overlay">
+                        <div class="breakout-overlay-content">
+                            <div class="breakout-message" id="breakout-message">Ready to blast some bricks?</div>
+                            <div class="breakout-sub-message" id="breakout-sub-message">Click Start Game to begin</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="breakout-power-ups" id="breakout-power-ups">
+                    <div class="breakout-power-up-item" id="multiball-status">
+                        <div class="breakout-power-icon">⚡</div>
+                        <div class="breakout-power-label">Multi-Ball</div>
+                    </div>
+                    <div class="breakout-power-up-item" id="laser-status">
+                        <div class="breakout-power-icon">🔆</div>
+                        <div class="breakout-power-label">Laser</div>
+                    </div>
+                    <div class="breakout-power-up-item" id="bigpaddle-status">
+                        <div class="breakout-power-icon">📏</div>
+                        <div class="breakout-power-label">Big Paddle</div>
+                    </div>                </div>
+            </div>
+
+            <div class="breakout-controls">
+                <div class="breakout-instructions">
+                    <div class="breakout-instruction">🖱️ Move mouse to control paddle</div>
+                    <div class="breakout-instruction">📍 Click to launch ball</div>
+                    <div class="breakout-instruction">🎯 Destroy all bricks to advance</div>
+                </div>
+                  <div class="breakout-actions">
+                    <button class="breakout-btn breakout-start-btn" id="breakout-start">Start Game</button>
+                    <button class="breakout-btn breakout-pause-btn" id="breakout-pause" style="display: none;">Pause</button>
+                    <button class="breakout-btn breakout-reset-btn" id="breakout-reset">Reset</button>
+                </div>
+
+                <div class="breakout-lives-indicator">
+                    <div class="breakout-lives-label">Lives:</div>
+                    <div class="breakout-lives-display" id="breakout-lives-display">
+                        <span class="breakout-life active">♥</span>
+                        <span class="breakout-life active">♥</span>
+                        <span class="breakout-life active">♥</span>
+                    </div>
+                </div>
+            </div>
+        </div>

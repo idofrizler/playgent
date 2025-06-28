@@ -4,7 +4,6 @@ Playgent is a fun and interactive VS Code extension that brings mini-games direc
 
 ## Games Included
 
-- **Robot Game**: A classic endless runner game where you jump over obstacles.
 - **Memory Game**: Test your memory by matching pairs of cards.
 - **Simon Says**: Follow the sequence of lights and sounds to win.
 - **Random xkcd**: Get random xkcd strips.

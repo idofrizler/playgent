@@ -1,0 +1,47 @@
+<div class="snake-container">
+            <div class="snake-header">
+                <div class="snake-title">Neon Snake</div>
+                <div class="snake-subtitle">Survive in the cyber grid</div>
+            </div>
+
+            <div class="snake-stats">
+                <div class="snake-stat">
+                    <div class="snake-stat-label">Score</div>
+                    <div class="snake-stat-value" id="snake-score">0</div>
+                </div>
+                <div class="snake-stat">
+                    <div class="snake-stat-label">Length</div>
+                    <div class="snake-stat-value" id="snake-length">3</div>
+                </div>
+                <div class="snake-stat">
+                    <div class="snake-stat-label">Best</div>
+                    <div class="snake-stat-value" id="snake-best">0</div>
+                </div>
+            </div>
+
+            <div class="snake-game-world">
+                <div class="snake-grid-container">
+                    <canvas id="snake-canvas" width="400" height="400"></canvas>
+                    <div class="snake-particles" id="snake-particles"></div>
+                </div>
+
+                <div class="snake-overlay" id="snake-overlay">
+                    <div class="snake-overlay-content">
+                        <div class="snake-message" id="snake-message">Ready to enter the grid?</div>
+                        <div class="snake-controls">Use WASD or Arrow Keys</div>
+                        <button class="snake-start-btn" id="snake-start">Start Game</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="snake-power-indicators">
+                <div class="snake-power-item" id="speed-boost">
+                    <div class="snake-power-icon">⚡</div>
+                    <div class="snake-power-label">Speed Boost</div>
+                </div>
+                <div class="snake-power-item" id="score-multiplier">
+                    <div class="snake-power-icon">✨</div>
+                    <div class="snake-power-label">Score x2</div>
+                </div>
+            </div>
+        </div>
